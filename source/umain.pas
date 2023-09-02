@@ -152,15 +152,16 @@ begin
   FViewer.BackColor := cbBackgroundColor.ButtonColor;
 end;
 
-procedure TMainForm.ApplicationPropertiesIdle(Sender: TObject; var Done: Boolean
-  );
+procedure TMainForm.ApplicationPropertiesIdle(Sender: TObject;
+  var Done: Boolean);
 begin
   Label1.Caption := Format(
     'Camera distance: %.3f' + LineEnding +
-    'x rotation: %.3f' + LineEnding +
-    'y rotation: %.3f' + LineEnding +
-    'z rotation: %.3f', [
-    FViewer.CameraDistance, FViewer.CameraRotX, FViewer.CameraRotY, FViewer.CameraRotZ
+    'x rotation: %.1f°' + LineEnding +
+    'y rotation: %.1f°' + LineEnding +
+    'z rotation: %.1f°', [
+    FViewer.CameraDistance,
+    FViewer.CameraRotX, FViewer.CameraRotY, FViewer.CameraRotZ
   ]);
 end;
 
