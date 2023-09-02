@@ -1,20 +1,24 @@
 unit uMain;
 
 {$mode objfpc}{$H+}
+{$.define OLD_FILE_FORMAT}
 
 interface
 
 uses
-  Classes, SysUtils, Types, Forms, Controls, Graphics, Dialogs, ExtCtrls,
-  StdCtrls, ComCtrls, Spin, Buttons, fpExprPars, gl, glu, uLiss3dTypes,
-  uLiss3dGen, uLiss3dViewGL;
+  Classes, SysUtils, LCLType, LCLIntf, Types, IniFiles,
+  Forms, Controls, Graphics, Dialogs, ExtCtrls,
+  StdCtrls, ComCtrls, Spin, Buttons, Menus,
+  fpExprPars, mrumanager, gl, glu,
+  uLiss3dTypes, uLiss3dGen, uLiss3dViewGL;
 
 type
-  TLoadSave = array[0..15] of DWord;
+  TLissFileRec = array[0..15] of DWord;
 
   { TMainForm }
 
   TMainForm = class(TForm)
+    ApplicationProperties: TApplicationProperties;
     cbSymbolColor: TColorButton;
     cbShowAxes: TCheckBox;
     cbBackgroundColor: TColorButton;
@@ -26,6 +30,7 @@ type
     edFormulaZ: TEdit;
     GroupBox3: TGroupBox;
     ImageList: TImageList;
+    Label1: TLabel;
     lblXEquals: TLabel;
     lblYEquals: TLabel;
     lblZEquals: TLabel;
@@ -41,6 +46,7 @@ type
     lblStepSize: TLabel;
     lblStepCount: TLabel;
     OpenDialog: TOpenDialog;
+    RecentFilesPopup: TPopupMenu;
     rbUserFormula: TRadioButton;
     rbFormula2: TRadioButton;
     rbFormula3: TRadioButton;
@@ -61,12 +67,14 @@ type
     tbLoadParams: TToolButton;
     tbSaveParams: TToolButton;
     tbSaveAsBitmap: TToolButton;
+    procedure ApplicationPropertiesIdle(Sender: TObject; var Done: Boolean);
     procedure cbBackgroundColorColorChanged(Sender: TObject);
     procedure cbShowAxesChange(Sender: TObject);
     procedure cbSymbolColorColorChanged(Sender: TObject);
     procedure cbTeleLensChange(Sender: TObject);
     procedure cbViewDirectionChange(Sender: TObject);
     procedure FormActivate(Sender: TObject);
+    procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure rbFormulaChange(Sender: TObject);
@@ -79,34 +87,31 @@ type
     FActivated: Boolean;
     FGenerator: TLiss3dGen;
     FViewer: TLiss3dViewerFrame;
+    FViewerLock: Integer;
     FParsers: array[0..2] of TFPExpressionParser;
+    FRecentFilesManager: TMRUMenuManager;
     procedure Formula1(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
     procedure Formula2(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
     procedure Formula3(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
     procedure FormulaUser(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
+    procedure LoadLissParams(ini: TCustomIniFile);
+    procedure LoadParamFile(const AFileName: String);
+    procedure RecentFileHandler(Sender: TObject; const AFileName: String);
+    procedure SaveLissParams(ini: TCustomIniFile);
     procedure UpdateCoeffState;
     procedure UpdateLissParams;
     procedure ViewerMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
 
   private
     // Parameters
-    procedure PackFile(out AData: TLoadSave);
-    procedure UnpackFile(AData: TLoadSave);
+    procedure PackParams(out AData: TLissFileRec);
+    function UnpackParams(AData: TLissFileRec): Boolean;
 
   private
-    (*
-    // OpenGL
-    FInitDone: Boolean;
-    FCameraDistance: GLFloat;
-    FCameraAngleX, FCameraAngleY, FCameraAngleZ: GLFloat;
-    FMouseX, FMouseY: GLFloat;
-    FSphere: PGLUQuadric;
-    FSymbolSize: Double;
-    procedure InitGL;
-    procedure InitLights;
-    procedure DrawAxes;
-    procedure DrawScene;
-    *)
+    // Config
+    function GetIniFileName: String;
+    procedure ReadFromIni;
+    procedure WriteToIni;
   public
 
   end;
@@ -119,7 +124,8 @@ implementation
 {$R *.lfm}
 
 uses
-  FPImage, GraphType;
+  //FPImage,
+  GraphType;
 
 const
   CAMERA_ANGLE = 45.0;
@@ -136,9 +142,26 @@ const
 
 { TMainForm }
 
+procedure TMainForm.btnCalculateClick(Sender: TObject);
+begin
+  UpdateLissajousHandler(nil);
+end;
+
 procedure TMainForm.cbBackgroundColorColorChanged(Sender: TObject);
 begin
   FViewer.BackColor := cbBackgroundColor.ButtonColor;
+end;
+
+procedure TMainForm.ApplicationPropertiesIdle(Sender: TObject; var Done: Boolean
+  );
+begin
+  Label1.Caption := Format(
+    'Camera distance: %.3f' + LineEnding +
+    'x rotation: %.3f' + LineEnding +
+    'y rotation: %.3f' + LineEnding +
+    'z rotation: %.3f', [
+    FViewer.CameraDistance, FViewer.CameraRotX, FViewer.CameraRotY, FViewer.CameraRotZ
+  ]);
 end;
 
 procedure TMainForm.cbShowAxesChange(Sender: TObject);
@@ -197,19 +220,35 @@ begin
   if not FActivated then
   begin
     FActivated := true;
+    ReadFromIni;
     UpdateLissajousHandler(nil);
   end;
+end;
+
+procedure TMainForm.FormCloseQuery(Sender: TObject; var CanClose: Boolean);
+begin
+  if CanClose then
+    WriteToIni;
 end;
 
 procedure TMainForm.FormCreate(Sender: TObject);
 var
   i: Integer;
 begin
+  FRecentFilesManager := TMRUMenuManager.Create(self);
+  FRecentFilesManager.MenuCaptionMask := '%0:x - %s';
+//  FRecentFilesManager.MenuItem := mnuRecentlyOpened;
+  FRecentFilesManager.PopupMenu := RecentFilesPopup;
+  FRecentFilesManager.OnRecentFile := @RecentFileHandler;
+  FRecentFilesManager.IniFileName := GetIniFileName;
+  FRecentFilesManager.IniSection := 'RecentFiles';
+
   FGenerator := TLiss3dGen.Create;
 
   FViewer := TLiss3dViewerFrame.Create(self);
   FViewer.Parent := Panel2;
   FViewer.Align := alClient;
+//  FViewer.BorderSpacing.Around := 8;
   FViewer.OnMouseMove := @ViewerMouseMove;
 
   for i := 0 to 2 do
@@ -268,14 +307,68 @@ begin
   P.Z := ArgToFloat(FParsers[2].Evaluate);
 end;
 
-procedure TMainForm.PackFile(out AData: TLoadSave);
-type
-  PDW = ^dword;
+function TMainForm.GetIniFileName: String;
+begin
+  Result := Application.Location + 'lissajous.cfg';
+end;
+
+procedure TMainForm.LoadLissParams(ini: TCustomIniFile);
+var
+  section: String;
+  idx: Integer;
+begin
+  Assert(ini <> nil);
+
+  inc(FViewerLock);
+
+  ini.FormatSettings.DecimalSeparator := '.';
+  ini.Options := ini.Options + [ifoFormatSettingsActive];
+
+  section := 'Formula';
+  idx := ini.ReadInteger(section, 'Selection', 0);
+  case idx of
+    1: rbFormula1.Checked := true;
+    2: rbFormula2.Checked := true;
+    3: rbFormula3.Checked := true;
+    4: begin
+         rbUserFormula.Checked := true;
+         edFormulaX.Text := ini.ReadString(section, 'x', '');
+         edFormulaY.Text := ini.ReadString(section, 'y', '');
+         edFormulaZ.Text := ini.ReadString(section, 'z', '');
+       end;
+  end;
+  rbFormulaChange(nil);
+
+  seCoeffA.Value := ini.ReadFloat(section, 'a', 0.0);
+  seCoeffB.Value := ini.ReadFloat(section, 'b', 0.0);
+  seCoeffC.Value := ini.ReadFloat(section, 'c', 0.0);
+  seCoeffD.Value := ini.ReadFloat(section, 'd', 0.0);
+  seStepCount.Value := ini.ReadInteger(section, 'StepCount', 0);
+  seStepSize.Value := ini.ReadFloat(section, 'StepSize', 1.0);
+
+  section := 'Rendering';
+  cbBackgroundColor.ButtonColor := ini.ReadInteger(section, 'BackgroundColor', clBlack);
+  cbSymbolColor.ButtonColor := ini.ReadInteger(section, 'SymbolColor', clRed);
+  cbViewDirection.ItemIndex := ini.ReadInteger(section, 'ViewPlane', 0);
+  cbShowAxes.Checked := ini.ReadBool(section, 'ShowAxes', false);
+  cbTeleLens.Checked := ini.ReadBool(section, 'TeleLens', false);
+
+  FViewer.SymbolSize := ini.ReadFloat(section, 'SymbolSize', FViewer.SymbolSize);
+  FViewer.CameraAngle := ini.ReadFloat(section, 'CameraAngle', FViewer.CameraAngle);
+  FViewer.CameraDistance := ini.ReadFloat(section, 'CameraDistance', FViewer.CameraDistance);
+  FViewer.CameraRotX := ini.ReadFloat(section, 'RotationX', FViewer.CameraRotX);
+  FViewer.CameraRotY := ini.ReadFloat(section, 'RotationY', FViewer.CameraRotY);
+  FViewer.CameraRotZ := ini.ReadFloat(section, 'RotationZ', FViewer.CameraRotZ);
+
+  dec(FViewerLock);
+end;
+
+procedure TMainForm.PackParams(out AData: TLissFileRec);
 var
   i: byte;
   x: Single;
 begin
-  AData := Default(TLoadSave);
+  AData := Default(TLissFileRec);
   for i := 0 to 4 do
     AData[i] := byte(SIGNATURE[i+1]);
 
@@ -298,15 +391,15 @@ begin
   AData[10] := seStepCount.Value;
 
   x := -seStepSize.Value;
-  AData[11] := PDW(@x)^;
+  AData[11] := PDWord(@x)^;
   for i := Low(IncValues) to High(IncValues) do
     if IncValues[i] = seStepSize.Value then
       AData[11] := i;
 
-  x := seCoeffA.Value;  AData[12] := PDW(@x)^;
-  x := seCoeffB.Value;  AData[13] := PDW(@x)^;
-  x := seCoeffC.Value;  AData[14] := PDW(@x)^;
-  x := seCoeffD.Value;  AData[15] := PDW(@x)^;
+  x := seCoeffA.Value;  AData[12] := PDWord(@x)^;
+  x := seCoeffB.Value;  AData[13] := PDWord(@x)^;
+  x := seCoeffC.Value;  AData[14] := PDWord(@x)^;
+  x := seCoeffD.Value;  AData[15] := PDWord(@x)^;
 end;
 
 procedure TMainForm.rbFormulaChange(Sender: TObject);
@@ -337,26 +430,125 @@ begin
   UpdateLissajousHandler(nil);
 end;
 
-procedure TMainForm.btnCalculateClick(Sender: TObject);
+procedure TMainForm.ReadFromIni;
+var
+  ini: TCustomIniFile;
+  L, T, W, H: Integer;
+  R: TRect;
 begin
-  UpdateLissajousHandler(nil);
+  ini := TIniFile.Create(GetIniFileName);
+  try
+    T := ini.ReadInteger('MainForm', 'Top', Top);
+    L := ini.ReadInteger('MainForm', 'Left', Left);
+    W := ini.ReadInteger('MainForm', 'Width', Width);
+    H := ini.ReadInteger('MainForm', 'Height', Height);
+    R := Screen.WorkAreaRect;
+    if W > R.Width then W := R.Width;
+    if H > R.Height then H := R.Height;
+    if L < R.Left then L := R.Left;
+    if T < R.Top then T := R.Top;
+    if L + W > R.Right then L := R.Right - W - GetSystemMetrics(SM_CXSIZEFRAME);
+    if T + H > R.Bottom then T := R.Bottom - H - GetSystemMetrics(SM_CYCAPTION) - GetSystemMetrics(SM_CYSIZEFRAME);
+    SetBounds(L, T, W, H);
+    WindowState := wsNormal;
+    Application.ProcessMessages;
+    WindowState := TWindowState(ini.ReadInteger('Position', 'WindowState', 0));
+
+    LoadLissParams(ini);
+  finally
+    ini.Free;
+  end;
+end;
+
+procedure TMainForm.RecentFileHandler(Sender: TObject;
+  const AFileName: String);
+begin
+  LoadParamFile(AFileName);
+end;
+
+procedure TMainForm.SaveLissParams(ini: TCustomIniFile);
+var
+  section: String;
+  idx: Integer;
+begin
+  Assert(ini <> nil);
+
+  ini.FormatSettings.DecimalSeparator := '.';
+  ini.Options := ini.Options + [ifoFormatSettingsActive];
+
+  if rbFormula1.Checked then
+    idx := 1
+  else if rbFormula2.checked then
+    idx := 2
+  else if rbFormula3.Checked then
+    idx := 3
+  else if rbUserFormula.Checked then
+    idx := 4
+  else
+    raise Exception.Create('Illegal formula selection');
+
+  section := 'Formula';
+  ini.WriteInteger(section, 'Selection', idx);
+  ini.WriteString(section, 'x', edFormulaX.Text);
+  ini.WriteString(section, 'y', edFormulaY.Text);
+  ini.WriteString(section, 'z', edFormulaZ.Text);
+
+  ini.WriteFloat(section, 'a', seCoeffA.Value);
+  ini.WriteFloat(section, 'b', seCoeffB.Value);
+  ini.WriteFloat(section, 'c', seCoeffC.Value);
+  ini.WriteFloat(section, 'd', seCoeffD.Value);
+
+  ini.WriteInteger(section, 'StepCount', seStepCount.Value);
+  ini.WriteFloat(section, 'StepSize', seStepSize.Value);
+
+  section := 'Rendering';
+  ini.WriteInteger(section, 'BackgroundColor', cbBackgroundColor.ButtonColor);
+  ini.WriteInteger(section, 'SymbolColor', cbSymbolColor.ButtonColor);
+  ini.WriteInteger(section, 'ViewPlane', cbViewDirection.ItemIndex);
+  ini.WriteBool(section, 'ShowAxes', cbShowAxes.Checked);
+  ini.WriteBool(section, 'TeleLens', cbTeleLens.Checked);
+  ini.WriteFloat(section, 'SymbolSize', FViewer.SymbolSize);
+  ini.WriteFloat(section, 'CameraAngle', FViewer.CameraAngle);
+  ini.WriteFloat(section, 'CameraDistance', FViewer.CameraDistance);
+  ini.WriteFloat(section, 'RotationX', FViewer.CameraRotX);
+  ini.WriteFloat(section, 'RotationY', FViewer.CameraRotY);
+  ini.WriteFloat(section, 'RotationZ', FViewer.CameraRotZ);
 end;
 
 procedure TMainForm.tbLoadParamsClick(Sender: TObject);
-var
-  F: file of TloadSave;
-  data: TLoadSave;
 begin
   with OpenDialog do
     if Execute then
-      try
-        AssignFile(F, Filename);
-        Reset(F);
-        Read(F, data);
-        UnpackFile(data);
-      finally
-        CloseFile(F);
-      end;
+      LoadParamFile(FileName);
+end;
+
+procedure TMainForm.LoadParamFile(const AFileName: String);
+var
+  F: file of TLissFileRec;
+  data: TLissFileRec;
+  ini: TCustomIniFile;
+begin
+  try
+    AssignFile(F, AFilename);
+    Reset(F);
+    Read(F, data);
+  finally
+    CloseFile(F);
+  end;
+
+  if not UnpackParams(data) then
+  begin
+    ini := TIniFile.Create(AFileName);
+    try
+      LoadLissParams(ini);
+    finally
+      ini.Free;
+    end;
+  end;
+
+  UpdateLissajousHandler(nil);
+
+  FRecentFilesManager.AddToRecent(AFileName);
 end;
 
 procedure TMainForm.tbSaveAsBitmapClick(Sender: TObject);
@@ -390,28 +582,41 @@ end;
 // Save settings of drawing
 procedure TMainForm.tbSaveParamsClick(Sender: TObject);
 var
+{$IFDEF OLD_FILE_FORMAT}
   F: File of TLoadSave;
   data: TLoadSave;
+{$ELSE}
+  ini: TCustomIniFile;
+{$ENDIF}
 begin
-  PackFile(data);
   with SaveDialog do
   begin
     Filter := 'Lissajous files|*.l3d';
     DefaultExt := '.l3d';
     if Execute then
+    begin
+     {$IFDEF OLD_FILE_FORMAT}
       try
+        PackFile(data);
         AssignFile(F, FileName);
         ReWrite(F);
         Write(F, data);
       finally
         CloseFile(F);
       end;
+     {$ELSE}
+      ini := TIniFile.Create(FileName);
+      try
+        SaveLissParams(ini);
+      finally
+        ini.Free;
+      end;
+     {$ENDIF}
+    end;
   end;
 end;
 
-procedure TMainForm.UnpackFile(AData: TLoadSave);
-type
-  PS = ^Single;
+function TMainForm.UnpackParams(AData: TLissFileRec): Boolean;
 var
   s: string;
   i: byte;
@@ -419,17 +624,19 @@ var
   penColor: Integer;
   smooth: boolean;
   grid: Boolean;
-  stepCount: Integer;
   incIdX: Integer;
   incSize: Single;
 begin
   s := '';
-  for i := 0 to 4 do s := s + chr(AData[i]);
+  for i := 0 to 4 do
+    s := s + chr(AData[i]);
   if (s <> SIGNATURE) then
   begin
-    MessageDlg('No lissajous parameter file.', mtError, [mbOK], 0);
+    Result := false;
     exit;
   end;
+
+  inc(FViewerLock);
 
   // Formula
   case AData[5] of
@@ -455,7 +662,7 @@ begin
   seStepCount.Value := AData[10];
 
   // Step size
-  incSize := PS(@AData[11])^;
+  incSize := PSingle(@AData[11])^;
   if incSize < 0 then
     seStepSize.Value := incSize
   else
@@ -468,12 +675,14 @@ begin
   end;
 
   // Coefficients
-  seCoeffA.Value := PS(@AData[12])^;
-  seCoeffB.Value := PS(@AData[13])^;
-  seCoeffC.Value := PS(@AData[14])^;
-  seCoeffD.Value := PS(@AData[15])^;
+  seCoeffA.Value := PSingle(@AData[12])^;
+  seCoeffB.Value := PSingle(@AData[13])^;
+  seCoeffC.Value := PSingle(@AData[14])^;
+  seCoeffD.Value := PSingle(@AData[15])^;
 
-  UpdateLissParams;
+  dec(FViewerLock);
+
+  Result := true;
 end;
 
 procedure TMainForm.UpdateCoeffState;
@@ -484,6 +693,9 @@ end;
 
 procedure TMainForm.UpdateLissajousHandler(Sender: TObject);
 begin
+  if FViewerLock > 0 then
+    exit;
+
   UpdateLissParams;
   FGenerator.Calculate;
   FViewer.Points := FGenerator.Points;
@@ -515,6 +727,24 @@ procedure TMainForm.ViewerMouseMove(Sender: TObject;
 begin
   if ([ssLeft, ssRight] * Shift <> []) then
     cbViewDirection.ItemIndex := 0;
+end;
+
+procedure TMainForm.WriteToIni;
+var
+  ini: TCustomIniFile;
+begin
+  ini := TIniFile.Create(GetIniFileName);
+  try
+    ini.WriteInteger('MainForm', 'Top', RestoredTop);
+    ini.WriteInteger('MainForm', 'Left', RestoredLeft);
+    ini.WriteInteger('MainForm', 'Width', RestoredWidth);
+    ini.WriteInteger('MainForm', 'Height', RestoredHeight);
+    ini.WriteInteger('MainForm', 'WindowState', Integer(WindowState));
+
+    SaveLissParams(ini);
+  finally
+    ini.Free;
+  end;
 end;
 
 end.

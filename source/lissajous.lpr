@@ -11,7 +11,7 @@ uses
   {$ENDIF}
   Interfaces, // this includes the LCL widgetset
   Forms, uMain, lazopenglcontext, uLiss3dGen, uLiss3DTypes, 
-uLiss3dViewGL
+uLiss3dViewGL, mrumanager
   { you can add units after this };
 
 {$R *.res}

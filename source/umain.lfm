@@ -9,6 +9,7 @@ object MainForm: TMainForm
   ShowHint = True
   LCLVersion = '3.99.0.0'
   OnActivate = FormActivate
+  OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   object Panel1: TPanel
@@ -392,7 +393,7 @@ object MainForm: TMainForm
     end
     object GroupBox3: TGroupBox
       Left = 12
-      Height = 122
+      Height = 190
       Top = 427
       Width = 201
       Align = alTop
@@ -400,7 +401,7 @@ object MainForm: TMainForm
       BorderSpacing.Left = 12
       BorderSpacing.Top = 16
       Caption = 'Rendering'
-      ClientHeight = 102
+      ClientHeight = 170
       ClientWidth = 197
       TabOrder = 2
       object cbSymbolColor: TColorButton
@@ -543,6 +544,17 @@ object MainForm: TMainForm
         Margin = 4
         OnColorChanged = cbBackgroundColorColorChanged
       end
+      object Label1: TLabel
+        AnchorSideLeft.Control = cbTeleLens
+        AnchorSideTop.Control = cbTeleLens
+        AnchorSideTop.Side = asrBottom
+        Left = 8
+        Height = 60
+        Top = 102
+        Width = 94
+        BorderSpacing.Bottom = 8
+        Caption = 'Camera distance: '#13#10'x Rotation:'#13#10'y Rotation:'#13#10'z Rotation:'
+      end
     end
   end
   object Panel2: TPanel
@@ -573,18 +585,20 @@ object MainForm: TMainForm
       Left = 1
       Top = 0
       Caption = 'Load parameters...'
+      DropdownMenu = RecentFilesPopup
       ImageIndex = 0
+      Style = tbsDropDown
       OnClick = tbLoadParamsClick
     end
     object tbSaveParams: TToolButton
-      Left = 135
+      Left = 147
       Top = 0
       Caption = 'Save parameters...'
       ImageIndex = 1
       OnClick = tbSaveParamsClick
     end
     object tbSaveAsBitmap: TToolButton
-      Left = 267
+      Left = 279
       Top = 0
       Caption = 'Save image...'
       ImageIndex = 2
@@ -938,5 +952,14 @@ object MainForm: TMainForm
     Filter = 'Lissajous files|*.l3d'
     Left = 240
     Top = 40
+  end
+  object RecentFilesPopup: TPopupMenu
+    Left = 56
+    Top = 104
+  end
+  object ApplicationProperties: TApplicationProperties
+    OnIdle = ApplicationPropertiesIdle
+    Left = 448
+    Top = 112
   end
 end

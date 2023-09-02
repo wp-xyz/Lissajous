@@ -62,6 +62,10 @@
         <ResourceBaseClass Value="Frame"/>
         <UnitName Value="uLiss3dViewGL"/>
       </Unit>
+      <Unit>
+        <Filename Value="mrumanager.pp"/>
+        <IsPartOfProject Value="True"/>
+      </Unit>
     </Units>
   </ProjectOptions>
   <CompilerOptions>
