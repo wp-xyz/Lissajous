@@ -1,0 +1,23 @@
+object Liss3dViewerFrame: TLiss3dViewerFrame
+  Left = 0
+  Height = 373
+  Top = 0
+  Width = 553
+  ClientHeight = 373
+  ClientWidth = 553
+  TabOrder = 0
+  DesignLeft = 659
+  DesignTop = 266
+  object OpenGLControl: TOpenGLControl
+    Left = 0
+    Height = 373
+    Top = 0
+    Width = 553
+    Align = alClient
+    OnMouseDown = OpenGLControlMouseDown
+    OnMouseMove = OpenGLControlMouseMove
+    OnMouseWheel = OpenGLControlMouseWheel
+    OnPaint = OpenGLControlPaint
+    OnResize = OpenGLControlResize
+  end
+end
