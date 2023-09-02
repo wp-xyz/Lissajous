@@ -1,11 +1,11 @@
 object MainForm: TMainForm
   Left = 314
-  Height = 661
+  Height = 668
   Top = 130
-  Width = 788
+  Width = 789
   Caption = 'Lissajous curve generator'
-  ClientHeight = 661
-  ClientWidth = 788
+  ClientHeight = 668
+  ClientWidth = 789
   ShowHint = True
   LCLVersion = '3.99.0.0'
   OnActivate = FormActivate
@@ -13,14 +13,14 @@ object MainForm: TMainForm
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   object Panel1: TPanel
-    Left = 563
-    Height = 623
-    Top = 38
+    Left = 564
+    Height = 632
+    Top = 36
     Width = 213
     Align = alRight
     BorderSpacing.Right = 12
     BevelOuter = bvNone
-    ClientHeight = 623
+    ClientHeight = 632
     ClientWidth = 213
     TabOrder = 0
     object GroupBox1: TGroupBox
@@ -92,7 +92,48 @@ object MainForm: TMainForm
         TabOrder = 3
         OnChange = rbFormulaChange
       end
-      object edFormulaX: TEdit
+      object lblXEquals: TLabel
+        AnchorSideLeft.Control = rbUserFormula
+        AnchorSideTop.Side = asrCenter
+        Left = 12
+        Height = 15
+        Top = 88
+        Width = 17
+        Caption = 'x ='
+      end
+      object lblYEquals: TLabel
+        AnchorSideLeft.Control = rbUserFormula
+        AnchorSideTop.Side = asrCenter
+        Left = 12
+        Height = 15
+        Top = 113
+        Width = 17
+        Caption = 'y ='
+      end
+      object lblZEquals: TLabel
+        AnchorSideLeft.Control = rbUserFormula
+        AnchorSideTop.Side = asrCenter
+        Left = 12
+        Height = 15
+        Top = 138
+        Width = 16
+        Caption = 'z ='
+      end
+      object btnCalculate: TSpeedButton
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = rbUserFormula
+        AnchorSideTop.Side = asrCenter
+        AnchorSideRight.Side = asrBottom
+        Left = 131
+        Height = 22
+        Top = 55
+        Width = 58
+        Anchors = [akTop, akRight]
+        BorderSpacing.Left = 8
+        Caption = 'Calculate'
+        OnClick = btnCalculateClick
+      end
+      object edFormulaX: TComboBox
         AnchorSideLeft.Control = lblXEquals
         AnchorSideLeft.Side = asrBottom
         AnchorSideTop.Control = rbUserFormula
@@ -107,29 +148,10 @@ object MainForm: TMainForm
         BorderSpacing.Left = 6
         BorderSpacing.Top = 8
         BorderSpacing.Right = 8
+        ItemHeight = 15
         TabOrder = 4
       end
-      object lblXEquals: TLabel
-        AnchorSideLeft.Control = rbUserFormula
-        AnchorSideTop.Control = edFormulaX
-        AnchorSideTop.Side = asrCenter
-        Left = 12
-        Height = 15
-        Top = 88
-        Width = 17
-        Caption = 'x ='
-      end
-      object lblYEquals: TLabel
-        AnchorSideLeft.Control = rbUserFormula
-        AnchorSideTop.Control = edFormulaY
-        AnchorSideTop.Side = asrCenter
-        Left = 12
-        Height = 15
-        Top = 113
-        Width = 17
-        Caption = 'y ='
-      end
-      object edFormulaY: TEdit
+      object edFormulaY: TComboBox
         AnchorSideLeft.Control = lblYEquals
         AnchorSideLeft.Side = asrBottom
         AnchorSideTop.Control = edFormulaX
@@ -144,19 +166,10 @@ object MainForm: TMainForm
         BorderSpacing.Left = 6
         BorderSpacing.Top = 2
         BorderSpacing.Right = 8
+        ItemHeight = 15
         TabOrder = 5
       end
-      object lblZEquals: TLabel
-        AnchorSideLeft.Control = rbUserFormula
-        AnchorSideTop.Control = edFormulaZ
-        AnchorSideTop.Side = asrCenter
-        Left = 12
-        Height = 15
-        Top = 138
-        Width = 16
-        Caption = 'z ='
-      end
-      object edFormulaZ: TEdit
+      object edFormulaZ: TComboBox
         AnchorSideLeft.Control = lblZEquals
         AnchorSideLeft.Side = asrBottom
         AnchorSideTop.Control = edFormulaY
@@ -172,22 +185,8 @@ object MainForm: TMainForm
         BorderSpacing.Top = 2
         BorderSpacing.Right = 8
         BorderSpacing.Bottom = 8
+        ItemHeight = 15
         TabOrder = 6
-      end
-      object btnCalculate: TSpeedButton
-        AnchorSideLeft.Side = asrBottom
-        AnchorSideTop.Control = rbUserFormula
-        AnchorSideTop.Side = asrCenter
-        AnchorSideRight.Control = edFormulaX
-        AnchorSideRight.Side = asrBottom
-        Left = 131
-        Height = 22
-        Top = 55
-        Width = 58
-        Anchors = [akTop, akRight]
-        BorderSpacing.Left = 8
-        Caption = 'Calculate'
-        OnClick = btnCalculateClick
       end
     end
     object GroupBox2: TGroupBox
@@ -431,7 +430,7 @@ object MainForm: TMainForm
         Width = 80
         BorderSpacing.Top = 4
         Caption = 'Show axes ('
-        TabOrder = 0
+        TabOrder = 1
         OnChange = cbShowAxesChange
       end
       object lblX: TLabel
@@ -501,7 +500,7 @@ object MainForm: TMainForm
         Width = 63
         BorderSpacing.Bottom = 8
         Caption = 'Tele lens'
-        TabOrder = 1
+        TabOrder = 2
         OnChange = cbTeleLensChange
       end
       object cbViewDirection: TComboBox
@@ -522,7 +521,7 @@ object MainForm: TMainForm
           'diagonal'
         )
         Style = csDropDownList
-        TabOrder = 2
+        TabOrder = 0
         Text = 'xy plane'
         OnChange = cbViewDirectionChange
       end
@@ -559,24 +558,24 @@ object MainForm: TMainForm
   end
   object Panel2: TPanel
     Left = 0
-    Height = 623
-    Top = 38
-    Width = 563
+    Height = 632
+    Top = 36
+    Width = 564
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
   end
   object ToolBar: TToolBar
     Left = 0
-    Height = 38
+    Height = 36
     Top = 0
-    Width = 788
+    Width = 789
     AutoSize = True
     BorderWidth = 2
     ButtonHeight = 36
     ButtonWidth = 60
     Caption = 'ToolBar'
-    EdgeBorders = [ebBottom]
+    EdgeBorders = []
     Images = ImageList
     List = True
     ShowCaptions = True
@@ -958,6 +957,7 @@ object MainForm: TMainForm
     Top = 104
   end
   object ApplicationProperties: TApplicationProperties
+    ExceptionDialog = aedOkMessageBox
     OnIdle = ApplicationPropertiesIdle
     Left = 448
     Top = 112

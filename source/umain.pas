@@ -25,9 +25,9 @@ type
     cbTeleLens: TCheckBox;
     ColorButton1: TColorButton;
     cbViewDirection: TComboBox;
-    edFormulaX: TEdit;
-    edFormulaY: TEdit;
-    edFormulaZ: TEdit;
+    edFormulaX: TComboBox;
+    edFormulaY: TComboBox;
+    edFormulaZ: TComboBox;
     GroupBox3: TGroupBox;
     ImageList: TImageList;
     Label1: TLabel;
@@ -90,6 +90,7 @@ type
     FViewerLock: Integer;
     FParsers: array[0..2] of TFPExpressionParser;
     FRecentFilesManager: TMRUMenuManager;
+    procedure Calculate;
     procedure Formula1(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
     procedure Formula2(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
     procedure Formula3(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
@@ -99,6 +100,7 @@ type
     procedure RecentFileHandler(Sender: TObject; const AFileName: String);
     procedure SaveLissParams(ini: TCustomIniFile);
     procedure UpdateCoeffState;
+    procedure UpdateFormulaHistory;
     procedure UpdateLissParams;
     procedure ViewerMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
 
@@ -128,6 +130,8 @@ uses
   GraphType;
 
 const
+  MAX_FORMULA_COUNT = 20;
+
   CAMERA_ANGLE = 45.0;
   TELE_DISTANCE_FACTOR = 2.0;
   TELE_ANGLE = 10.0;
@@ -140,17 +144,8 @@ const
   ColorList: array[0..6] of dword =
     ($ffffff, $ff0000, $00ff00, $0000ff, $ffff00, $ff00ff, $00ffff);
 
+
 { TMainForm }
-
-procedure TMainForm.btnCalculateClick(Sender: TObject);
-begin
-  UpdateLissajousHandler(nil);
-end;
-
-procedure TMainForm.cbBackgroundColorColorChanged(Sender: TObject);
-begin
-  FViewer.BackColor := cbBackgroundColor.ButtonColor;
-end;
 
 procedure TMainForm.ApplicationPropertiesIdle(Sender: TObject;
   var Done: Boolean);
@@ -163,6 +158,28 @@ begin
     FViewer.CameraDistance,
     FViewer.CameraRotX, FViewer.CameraRotY, FViewer.CameraRotZ
   ]);
+end;
+
+procedure TMainForm.btnCalculateClick(Sender: TObject);
+begin
+  Calculate;
+end;
+
+procedure TMainForm.Calculate;
+begin
+  if FViewerLock > 0 then
+    exit;
+
+  UpdateLissParams;
+  FGenerator.Calculate;
+  FViewer.Points := FGenerator.Points;
+  FViewer.Invalidate;
+  //UpdateFormulaHistory;
+end;
+
+procedure TMainForm.cbBackgroundColorColorChanged(Sender: TObject);
+begin
+  FViewer.BackColor := cbBackgroundColor.ButtonColor;
 end;
 
 procedure TMainForm.cbShowAxesChange(Sender: TObject);
@@ -222,7 +239,7 @@ begin
   begin
     FActivated := true;
     ReadFromIni;
-    UpdateLissajousHandler(nil);
+    Calculate;
   end;
 end;
 
@@ -428,7 +445,7 @@ begin
   edFormulaZ.Enabled := rbUserFormula.Checked;
 
   UpdateCoeffState;
-  UpdateLissajousHandler(nil);
+  Calculate;
 end;
 
 procedure TMainForm.ReadFromIni;
@@ -436,6 +453,10 @@ var
   ini: TCustomIniFile;
   L, T, W, H: Integer;
   R: TRect;
+  List: TStrings;
+  s: String;
+  ch: Char;
+  i: Integer;
 begin
   ini := TIniFile.Create(GetIniFileName);
   try
@@ -456,6 +477,28 @@ begin
     WindowState := TWindowState(ini.ReadInteger('Position', 'WindowState', 0));
 
     LoadLissParams(ini);
+
+    edFormulaX.Items.Clear;
+    edFormulaY.Items.Clear;
+    edFormulaZ.Items.Clear;
+    List := TStringList.Create;
+    try
+      ini.ReadSection('FormulaHistory', List);
+      for i := 0 to List.Count-1 do
+      begin
+        s := List[i];
+        ch := s[1];
+        s := ini.ReadString('FormulaHistory', List[i], '');
+        if s <> '' then
+          case ch of
+            'x': edFormulaX.Items.Add(s);
+            'y': edFormulaY.Items.Add(s);
+            'z': edFormulaZ.Items.Add(s);
+          end;
+      end;
+    finally
+      List.Free;
+    end;
   finally
     ini.Free;
   end;
@@ -547,7 +590,7 @@ begin
     end;
   end;
 
-  UpdateLissajousHandler(nil);
+  Calculate;
 
   FRecentFilesManager.AddToRecent(AFileName);
 end;
@@ -692,15 +735,35 @@ begin
   lblCoeffD.Enabled := not rbFormula1.Checked;
 end;
 
+procedure TMainForm.UpdateFormulaHistory;
+
+  procedure UpdateHistory(ACombobox: TCombobox);
+  var
+    s: String;
+    idx: Integer;
+  begin
+    s := ACombobox.Text;
+    if s = '' then
+      exit;
+    idx := ACombobox.Items.IndexOf(s);
+    if idx = -1 then
+    begin
+      ACombobox.Items.Insert(0, s);
+      while ACombobox.Items.Count > MAX_FORMULA_COUNT do
+        ACombobox.Items.Delete(ACombobox.Items.Count-1);
+    end else
+      AComboBox.Items.Move(idx, 0);
+  end;
+
+begin
+  UpdateHistory(edFormulaX);
+  UpdateHistory(edFormulaY);
+  UpdateHistory(edFormulaZ);
+end;
+
 procedure TMainForm.UpdateLissajousHandler(Sender: TObject);
 begin
-  if FViewerLock > 0 then
-    exit;
-
-  UpdateLissParams;
-  FGenerator.Calculate;
-  FViewer.Points := FGenerator.Points;
-  FViewer.Invalidate;
+  Calculate;
 end;
 
 procedure TMainForm.UpdateLissParams;
@@ -708,13 +771,17 @@ begin
   FGenerator.SetCoeffs([seCoeffA.Value, seCoeffB.Value, seCoeffC.Value, seCoeffD.Value]);
   FGenerator.StepCount := seStepCount.Value;
   FGenerator.StepSize := seStepSize.Value * pi/180;
+
   if rbFormula1.Checked then
     FGenerator.Formula := @Formula1
-  else if rbFormula2.Checked then
+  else
+  if rbFormula2.Checked then
     FGenerator.Formula := @Formula2
-  else if rbFormula3.Checked then
+  else
+  if rbFormula3.Checked then
     FGenerator.Formula := @Formula3
-  else if rbUserFormula.Checked then
+  else
+  if rbUserFormula.Checked then
   begin
     FParsers[0].Expression := edFormulaX.Text;
     FParsers[1].Expression := edFormulaY.Text;
@@ -733,6 +800,7 @@ end;
 procedure TMainForm.WriteToIni;
 var
   ini: TCustomIniFile;
+  i: Integer;
 begin
   ini := TIniFile.Create(GetIniFileName);
   try
@@ -743,6 +811,13 @@ begin
     ini.WriteInteger('MainForm', 'WindowState', Integer(WindowState));
 
     SaveLissParams(ini);
+
+    for i:=0 to edFormulaX.Items.Count-1 do
+      ini.WriteString('FormulaHistory', 'x' + IntToStr(i), edFormulaX.Items[i]);
+    for i:=0 to edFormulaY.Items.Count-1 do
+      ini.WriteString('FormulaHistory', 'y' + IntToStr(i), edFormulaY.Items[i]);
+    for i:=0 to edFormulaZ.Items.Count-1 do
+      ini.WriteString('FormulaHistory', 'z' + IntToStr(i), edFormulaZ.Items[i]);
   finally
     ini.Free;
   end;
