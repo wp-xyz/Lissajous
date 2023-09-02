@@ -5,10 +5,9 @@ unit uMain;
 interface
 
 uses
-  Classes, SysUtils, Types,
-  Forms, Controls, Graphics, Dialogs, ExtCtrls, StdCtrls, ComCtrls, Spin,
-  gl, glu, OpenGLContext,
-  uLiss3dTypes, uLiss3dGen, uLiss3dViewGL;
+  Classes, SysUtils, Types, Forms, Controls, Graphics, Dialogs, ExtCtrls,
+  StdCtrls, ComCtrls, Spin, Buttons, fpExprPars, gl, glu, uLiss3dTypes,
+  uLiss3dGen, uLiss3dViewGL;
 
 type
   TLoadSave = array[0..15] of DWord;
@@ -22,8 +21,14 @@ type
     cbTeleLens: TCheckBox;
     ColorButton1: TColorButton;
     cbViewDirection: TComboBox;
+    edFormulaX: TEdit;
+    edFormulaY: TEdit;
+    edFormulaZ: TEdit;
     GroupBox3: TGroupBox;
     ImageList: TImageList;
+    lblXEquals: TLabel;
+    lblYEquals: TLabel;
+    lblZEquals: TLabel;
     lblX: TLabel;
     lblY: TLabel;
     lblZ: TLabel;
@@ -33,36 +38,26 @@ type
     lblCoeffD: TLabel;
     lblCoeffC: TLabel;
     lblCoeffB: TLabel;
-    lblFormula3X: TLabel;
-    lblFormula3Y: TLabel;
-    lblFormula2Z: TLabel;
-    lblFormula2X: TLabel;
-    lblFormula2Y: TLabel;
-    lblFormula3Z: TLabel;
     lblStepSize: TLabel;
     lblStepCount: TLabel;
     OpenDialog: TOpenDialog;
-    Panel4: TPanel;
-    Panel5: TPanel;
+    rbUserFormula: TRadioButton;
     rbFormula2: TRadioButton;
     rbFormula3: TRadioButton;
     SaveDialog: TSaveDialog;
     seCoeffA: TFloatSpinEdit;
     GroupBox1: TGroupBox;
     GroupBox2: TGroupBox;
-    lblFormula1X: TLabel;
-    lblFormula1Y: TLabel;
-    lblFormula1Z: TLabel;
     Panel1: TPanel;
     Panel2: TPanel;
-    Panel3: TPanel;
     rbFormula1: TRadioButton;
     seCoeffD: TFloatSpinEdit;
     seCoeffC: TFloatSpinEdit;
     seCoeffB: TFloatSpinEdit;
     seStepSize: TFloatSpinEdit;
     seStepCount: TSpinEdit;
-    ToolBar1: TToolBar;
+    btnCalculate: TSpeedButton;
+    ToolBar: TToolBar;
     tbLoadParams: TToolButton;
     tbSaveParams: TToolButton;
     tbSaveAsBitmap: TToolButton;
@@ -75,6 +70,7 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure rbFormulaChange(Sender: TObject);
+    procedure btnCalculateClick(Sender: TObject);
     procedure tbLoadParamsClick(Sender: TObject);
     procedure tbSaveAsBitmapClick(Sender: TObject);
     procedure tbSaveParamsClick(Sender: TObject);
@@ -83,6 +79,11 @@ type
     FActivated: Boolean;
     FGenerator: TLiss3dGen;
     FViewer: TLiss3dViewerFrame;
+    FParsers: array[0..2] of TFPExpressionParser;
+    procedure Formula1(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
+    procedure Formula2(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
+    procedure Formula3(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
+    procedure FormulaUser(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
     procedure UpdateCoeffState;
     procedure UpdateLissParams;
     procedure ViewerMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
@@ -132,28 +133,6 @@ const
   );
   ColorList: array[0..6] of dword =
     ($ffffff, $ff0000, $00ff00, $0000ff, $ffff00, $ff00ff, $00ffff);
-
-procedure Formula1(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
-begin
-  P.X := cos(ACoeffs[0] * t);
-  P.Y := sin(ACoeffs[1] * t);
-  P.Z := sin(ACoeffs[2] * t);
-end;
-
-procedure Formula2(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
-begin
-  P.X := (cos(ACoeffs[0] * t) + cos(ACoeffs[1] * t)) / 2;
-  P.Y := (sin(ACoeffs[0] * t) + sin(ACoeffs[2] * t)) / 2;
-  P.Z := sin(ACoeffs[3] * t);
-end;
-
-procedure Formula3(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
-begin
-  P.X := sin(ACoeffs[0] * t) * ( 1.0 + cos(ACoeffs[1] * t)) / 2;
-  P.Y := sin(ACoeffs[0] * t) * ( 1.0 + sin(ACoeffs[2] * t)) / 2;
-  P.Z := sin(ACoeffs[3] * t);
-end;
-
 
 { TMainForm }
 
@@ -223,6 +202,8 @@ begin
 end;
 
 procedure TMainForm.FormCreate(Sender: TObject);
+var
+  i: Integer;
 begin
   FGenerator := TLiss3dGen.Create;
 
@@ -231,12 +212,60 @@ begin
   FViewer.Align := alClient;
   FViewer.OnMouseMove := @ViewerMouseMove;
 
+  for i := 0 to 2 do
+  begin
+    FParsers[i] := TFPExpressionParser.Create(Self);
+    FParsers[i].BuiltIns := [bcMath];
+    FParsers[i].Identifiers.AddFloatVariable('t', 0.0);
+    FParsers[i].Identifiers.AddFloatVariable('a', 0.0);
+    FParsers[i].Identifiers.AddFloatVariable('b', 0.0);
+    FParsers[i].Identifiers.AddFloatVariable('c', 0.0);
+    FParsers[i].Identifiers.AddFloatVariable('d', 0.0);
+  end;
+
   UpdateCoeffState;
 end;
 
 procedure TMainForm.FormDestroy(Sender: TObject);
 begin
   FGenerator.Free;
+end;
+
+procedure TMainForm.Formula1(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
+begin
+  P.X := cos(ACoeffs[0] * t);
+  P.Y := sin(ACoeffs[1] * t);
+  P.Z := sin(ACoeffs[2] * t);
+end;
+
+procedure TMainForm.Formula2(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
+begin
+  P.X := (cos(ACoeffs[0] * t) + cos(ACoeffs[1] * t)) / 2;
+  P.Y := (sin(ACoeffs[0] * t) + sin(ACoeffs[2] * t)) / 2;
+  P.Z := sin(ACoeffs[3] * t);
+end;
+
+procedure TMainForm.Formula3(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
+begin
+  P.X := sin(ACoeffs[0] * t) * ( 1.0 + cos(ACoeffs[1] * t)) / 2;
+  P.Y := sin(ACoeffs[0] * t) * ( 1.0 + sin(ACoeffs[2] * t)) / 2;
+  P.Z := sin(ACoeffs[3] * t);
+end;
+
+procedure TMainForm.FormulaUser(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
+var
+  i: Integer;
+begin
+  for i := 0 to 2 do begin
+    FParsers[i].Identifiers.IdentifierByName('t').AsFloat := t;
+    FParsers[i].Identifiers.IdentifierByName('a').AsFloat := ACoeffs[0];
+    FParsers[i].Identifiers.IdentifierByName('b').AsFloat := ACoeffs[1];
+    FParsers[i].Identifiers.IdentifierByName('c').AsFloat := ACoeffs[2];
+    FParsers[i].Identifiers.IdentifierByName('d').AsFloat := ACoeffs[3];
+  end;
+  P.X := ArgToFloat(FParsers[0].Evaluate);
+  P.Y := ArgToFloat(FParsers[1].Evaluate);
+  P.Z := ArgToFloat(FParsers[2].Evaluate);
 end;
 
 procedure TMainForm.PackFile(out AData: TLoadSave);
@@ -282,7 +311,34 @@ end;
 
 procedure TMainForm.rbFormulaChange(Sender: TObject);
 begin
+  if rbFormula1.Checked then
+  begin
+    edFormulaX.Text := 'cos(a*t)';
+    edFormulaY.Text := 'sin(b*t)';
+    edFormulaZ.Text := 'sin(c*t)';
+  end;
+  if rbFormula2.Checked then
+  begin
+    edFormulaX.Text := '(cos(a*t) + cos (b*t)) / 2';
+    edFormulaY.Text := '(sin(a*t) + sin(c*t)) / 2';
+    edFormulaZ.Text := 'sin(d*t)';
+  end;
+  if rbFormula2.Checked then
+  begin
+    edFormulaX.Text := 'sin(a*t) * (1 + cos(b*t)) / 2';
+    edFormulaY.Text := 'sin(a*t) * (1 + sin(c*t)) / 2';
+    edFormulaZ.Text := 'sin(d*t)';
+  end;
+  edFormulaX.Enabled := rbUserFormula.Checked;
+  edFormulaY.Enabled := rbUserFormula.Checked;
+  edFormulaZ.Enabled := rbUserFormula.Checked;
+
   UpdateCoeffState;
+  UpdateLissajousHandler(nil);
+end;
+
+procedure TMainForm.btnCalculateClick(Sender: TObject);
+begin
   UpdateLissajousHandler(nil);
 end;
 
@@ -416,6 +472,8 @@ begin
   seCoeffB.Value := PS(@AData[13])^;
   seCoeffC.Value := PS(@AData[14])^;
   seCoeffD.Value := PS(@AData[15])^;
+
+  UpdateLissParams;
 end;
 
 procedure TMainForm.UpdateCoeffState;
@@ -442,7 +500,14 @@ begin
   else if rbFormula2.Checked then
     FGenerator.Formula := @Formula2
   else if rbFormula3.Checked then
-    FGenerator.Formula := @Formula3;
+    FGenerator.Formula := @Formula3
+  else if rbUserFormula.Checked then
+  begin
+    FParsers[0].Expression := edFormulaX.Text;
+    FParsers[1].Expression := edFormulaY.Text;
+    FParsers[2].Expression := edFormulaZ.Text;
+    FGenerator.Formula := @FormulaUser;
+  end;
 end;
 
 procedure TMainForm.ViewerMouseMove(Sender: TObject;

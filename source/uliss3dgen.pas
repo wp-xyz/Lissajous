@@ -7,11 +7,11 @@ unit uLiss3dGen;
 interface
 
 uses
-  Classes, SysUtils, Math, uLiss3dTypes;
+  Classes, SysUtils,  uLiss3dTypes;
 
 type
   TLissCoeffs = array of Double;
-  TLissFormula = procedure(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
+  TLissFormula = procedure(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D) of object;
 
   TLiss3dGen = class
   private
@@ -19,7 +19,6 @@ type
     FStepCount: Integer;
     FStepSize: Double;
     FFormula: TLissFormula;
-    FXMax, FYMax, FZMax: Double;
   protected
 
   public
