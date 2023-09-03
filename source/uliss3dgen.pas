@@ -2,7 +2,7 @@
 
 unit uLiss3dGen;
 
-{$mode Delphi}
+{$mode ObjFPC}{$H+}
 
 interface
 
@@ -35,33 +35,18 @@ type
     property FormulaZ: string index 2 read GetFormula write SetFormula;
     property Coeff[AName: String]: Double read GetCoeff write SetCoeff;
     property StepCount: Integer read FStepCount write FStepCount;
-    property StepSize: Double read FStepSize write FStepSize;
+    property StepSize: Double read FStepSize write FStepSize;   // in degrees
   end;
 
 implementation
 
 constructor TLiss3dGen.Create;
-{
-var
-  pars: TFPExpressionParser;
-begin
-  for pars in FParsers do
-  begin
-    pars := TFPExpressionParser.Create(nil);
-    pars.BuiltIns := [bcMath];
-    pars.Identifiers.AddFloatVariable('t', 0.0);
-    pars.Identifiers.AddFloatVariable('a', 0.0);
-    pars.Identifiers.AddFloatVariable('b', 0.0);
-    pars.Identifiers.AddFloatVariable('c', 0.0);
-    pars.Identifiers.AddFloatVariable('d', 0.0);
-  end;
-  FStepCount := 400;
-  FStepSize := pi/180.0;
-end;
-}
 var
   i: Integer;
 begin
+  // Create the expression parsers:
+  // Index 0 for x, index 1 for y, index 2 for z variable.
+  // Add the needed variables (t, a, b, c, d) to each parser. }
   for i := 0 to 2 do
   begin
     FParsers[i] := TFPExpressionParser.Create(nil);
@@ -74,7 +59,7 @@ begin
   end;
 
   FStepCount := 400;
-  FStepSize := pi/180.0;
+  FStepSize := pi/180.0;    // Units of StepSize are angle degrees.
 end;
 
 destructor TLiss3dGen.Destroy;
@@ -93,6 +78,7 @@ var
   P: TPoint3d;
   PArr: array[0..2] of double;
 begin
+  Result := nil;
   SetLength(Result, FStepCount);
   for i := 0 to FStepCount-1 do
   begin
@@ -103,12 +89,6 @@ begin
       pArr[j] := ArgToFloat(FParsers[j].Evaluate);
     end;
     Result[i] := PPoint3D(@pArr)^;
-    {
-    P.X := ArgToFloat(FParsers[0].Evaluate);
-    P.Y := ArgToFloat(FParsers[1].Evaluate);
-    P.Z := ArgToFloat(FParsers[2].Evaluate);
-    Result[i] := P;
-    }
   end;
 end;
 

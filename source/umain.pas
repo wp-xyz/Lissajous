@@ -1,16 +1,15 @@
 unit uMain;
 
 {$mode objfpc}{$H+}
-{$.define OLD_FILE_FORMAT}
 
 interface
 
 uses                                                  lazloggerbase,
   Classes, SysUtils, LCLType, LCLIntf, Types, IniFiles,
   Forms, Controls, Graphics, Dialogs, ExtCtrls,
-  StdCtrls, ComCtrls, Spin, Buttons, Menus,
+  StdCtrls, ComCtrls, Spin, Buttons, Menus, ActnList, StdActns,
   mrumanager, gl, glu,
-  uLiss3dTypes, uLiss3dGen, uLiss3dViewGL;
+  uLiss3dGen, uLiss3dViewGL;
 
 type
   TLissFileRec = array[0..15] of DWord;
@@ -18,6 +17,12 @@ type
   { TMainForm }
 
   TMainForm = class(TForm)
+    acCalculate: TAction;
+    acLoadParams: TAction;
+    acSaveParams: TAction;
+    acSaveImage: TAction;
+    acResetParams: TAction;
+    ActionList: TActionList;
     ApplicationProperties: TApplicationProperties;
     cbSymbolColor: TColorButton;
     cbShowAxes: TCheckBox;
@@ -28,6 +33,7 @@ type
     edFormulaX: TComboBox;
     edFormulaY: TComboBox;
     edFormulaZ: TComboBox;
+    acExit: TFileExit;
     GroupBox3: TGroupBox;
     ImageList: TImageList;
     Label1: TLabel;
@@ -52,7 +58,7 @@ type
     GroupBox1: TGroupBox;
     GroupBox2: TGroupBox;
     Panel1: TPanel;
-    Panel2: TPanel;
+    ParamPanel: TPanel;
     seCoeffD: TFloatSpinEdit;
     seCoeffC: TFloatSpinEdit;
     seCoeffB: TFloatSpinEdit;
@@ -69,6 +75,11 @@ type
     ToolButton2: TToolButton;
     tbCalculate: TToolButton;
     ToolButton3: TToolButton;
+    procedure acCalculateExecute(Sender: TObject);
+    procedure acLoadParamsExecute(Sender: TObject);
+    procedure acResetParamsExecute(Sender: TObject);
+    procedure acSaveImageExecute(Sender: TObject);
+    procedure acSaveParamsExecute(Sender: TObject);
     procedure ApplicationPropertiesIdle(Sender: TObject; var Done: Boolean);
     procedure cbBackgroundColorColorChanged(Sender: TObject);
     procedure cbShowAxesChange(Sender: TObject);
@@ -81,11 +92,6 @@ type
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
     procedure tbCalculateClick(Sender: TObject);
-    procedure tbExitClick(Sender: TObject);
-    procedure tbLoadParamsClick(Sender: TObject);
-    procedure tbSaveAsBitmapClick(Sender: TObject);
-    procedure tbSaveParamsClick(Sender: TObject);
-    procedure tbResetClick(Sender: TObject);
     procedure UpdateLissajousHandler(Sender: TObject);
   private
     FActivated: Boolean;
@@ -96,6 +102,7 @@ type
 
   private
     // Formulas
+    procedure AddBuiltinFormulas;
     procedure Calculate;
     procedure UpdateFormulaHistory;
 
@@ -103,7 +110,6 @@ type
     // Parameters
     procedure LoadLissParams(ini: TCustomIniFile);
     procedure LoadParamFile(const AFileName: String);
-//    procedure PackParams(out AData: TLissFileRec);
     procedure SaveLissParams(ini: TCustomIniFile);
     function UnpackParams(AData: TLissFileRec): Boolean;
     procedure UpdateLissParams;
@@ -163,22 +169,128 @@ const
 
 { TMainForm }
 
+procedure TMainForm.acCalculateExecute(Sender: TObject);
+begin
+  Calculate;
+end;
+
+procedure TMainForm.acLoadParamsExecute(Sender: TObject);
+begin
+  with OpenDialog do
+  begin
+    Filter := 'Lissajous 3D files|*.l3d';
+    DefaultExt := '.l3d';
+    if Execute then
+      LoadParamFile(FileName);
+  end;
+end;
+
+procedure TMainForm.acResetParamsExecute(Sender: TObject);
+begin
+  seCoeffA.Value := 0.0;
+  seCoeffB.Value := 0.0;
+  seCoeffC.Value := 0.0;
+  seCoeffD.value := 0.0;
+  seStepCount.Value := 0;
+  seStepSize.Value := 1.0;
+  cbSymbolColor.ButtonColor := SYMBOL_COLOR;
+  cbBackgroundColor.ButtonColor := clBlack;
+  cbViewDirection.ItemIndex := 1;
+  cbShowAxes.Checked := false;
+  cbTeleLens.Checked := false;
+  FViewer.CameraDistance := CAMERA_DISTANCE;
+  FViewer.CameraAngle := VIEW_ANGLE;
+  FViewer.CameraRotX := 0;
+  FViewer.CameraRotY := 0;
+  FViewer.CameraRotZ := 0;
+  FViewer.ShowAxes := cbShowAxes.Checked;
+  FViewer.SymbolColor := cbSymbolColor.ButtonColor;
+  FViewer.BackColor := cbBackgroundColor.ButtonColor;
+end;
+
+procedure TMainForm.acSaveImageExecute(Sender: TObject);
+var
+  ext: string;
+  bm: TCustomBitmap;
+begin
+  with SaveDialog do
+  begin
+    Filter := 'BMP files|*.bmp|PNG files|*.png|JPEG files|*.jpg;*.jpeg';
+    FilterIndex := 2;
+    if Execute then
+    begin
+      ext := ExtractFileExt(FileName);
+      case ext of
+        '.bmp': bm := TBitmap.Create;
+        '.png': bm := TPortableNetworkGraphic.Create;
+        '.jpg', '.jpeg': bm := TJpegImage.Create;
+        else raise Exception.Create('Image type not supported.');
+      end;
+      try
+        FViewer.ToBitmap(bm);
+        bm.SaveToFile(FileName);
+      finally
+        bm.Free;
+      end;
+    end;
+  end;
+end;
+
+// Save settings of drawing
+procedure TMainForm.acSaveParamsExecute(Sender: TObject);
+var
+  ini: TCustomIniFile;
+begin
+  with SaveDialog do
+  begin
+    Filter := 'Lissajous 3D files|*.l3d';
+    DefaultExt := '.l3d';
+    if Execute then
+    begin
+      ini := TIniFile.Create(FileName);
+      try
+        SaveLissParams(ini);
+        FRecentFilesManager.AddToRecent(FileName);
+      finally
+        ini.Free;
+      end;
+    end;
+  end;
+end;
+
+procedure TMainForm.AddBuiltinFormulas;
+
+  procedure AddBuiltIn(ACombobox: TCombobox; AFormula: String);
+  begin
+    if ACombobox.Items.Indexof(AFormula) = -1 then
+      ACombobox.Items.Add(AFormula);
+  end;
+
+begin
+  AddBuiltin(edFormulaX, BUILTIN_FORMULA1_X);
+  AddBuiltIn(edFormulaX, BUILTIN_FORMULA2_X);
+  AddBuiltIn(edFormulaX, BUILTIN_FORMULA3_X);
+
+  AddBuiltin(edFormulaY, BUILTIN_FORMULA1_Y);
+  AddBuiltIn(edFormulaY, BUILTIN_FORMULA2_Y);
+  AddBuiltIn(edFormulaY, BUILTIN_FORMULA3_Y);
+
+  AddBuiltin(edFormulaZ, BUILTIN_FORMULA1_Z);
+  AddBuiltIn(edFormulaZ, BUILTIN_FORMULA2_Z);
+  AddBuiltIn(edFormulaZ, BUILTIN_FORMULA3_Z);
+end;
+
 procedure TMainForm.ApplicationPropertiesIdle(Sender: TObject;
   var Done: Boolean);
 begin
   Label1.Caption := Format(
     'Camera distance: %.3f' + LineEnding +
-    'x rotation: %.1f°' + LineEnding +
-    'y rotation: %.1f°' + LineEnding +
-    'z rotation: %.1f°', [
+    'x rotation: %.0f°' + LineEnding +
+    'y rotation: %.0f°' + LineEnding +
+    'z rotation: %.0f°', [
     FViewer.CameraDistance,
     FViewer.CameraRotX, FViewer.CameraRotY, FViewer.CameraRotZ
   ]);
-end;
-
-procedure TMainForm.tbExitClick(Sender: TObject);
-begin
-  Close;
 end;
 
 procedure TMainForm.Calculate;
@@ -229,21 +341,51 @@ begin
          FViewer.CameraRotY := 0;
          FViewer.CameraRotZ := 0;
        end;
-    2: begin    // yz plane
-         FViewer.CameraRotX := -90;
+    2: begin    // xy plane (opposite)
+         FViewer.CameraRotX := 180;
          FViewer.CameraRotY := 0;
          FViewer.CameraRotZ := 0;
        end;
-    3: begin    // xz plane
+    3: begin    // yz plane
          FViewer.CameraRotX := -90;
          FViewer.CameraRotY := 0;
          FViewer.CameraRotZ := -90;
        end;
-    4: begin    // diagonal
+    4: begin    // yz plane (opposite)
+         FViewer.CameraRotX := -90;
+         FViewer.CameraRotY := 0;
+         FViewer.CameraRotZ := 90;
+       end;
+    5: begin    // xz plane
+         FViewer.CameraRotX := -90;
+         FViewer.CameraRotY := 0;
+         FViewer.CameraRotZ := 0;
+       end;
+    6: begin    // xz plane (opposite)
+         FViewer.CameraRotX := -90;
+         FViewer.CameraRotY := 0;
+         FViewer.CameraRotZ := 180;
+       end;
+    7: begin    // diagonal 1
          FViewer.CameraRotX := 45;
          FViewer.CameraRotY := -45;
          FViewer.CameraRotZ := 0;
        end;
+    8: begin    // diagonal 2
+        FViewer.CameraRotX := 45;
+        FViewer.CameraRotY := 45;
+        FViewer.CameraRotZ := 0;
+      end;
+    9: begin    // diagonal 3
+        FViewer.CameraRotX := -45;
+        FViewer.CameraRotY := 0;
+        FViewer.CameraRotZ := 45;
+      end;
+  10: begin    // diagonal 4
+        FViewer.CameraRotX := 45;
+        FViewer.CameraRotY := 0;
+        FViewer.CameraRotZ := 45;
+      end;
   end;
   FViewer.InvalidateView;
 end;
@@ -275,6 +417,7 @@ begin
   if not FActivated then
   begin
     FActivated := true;
+    AutoSize := false;
     ReadFromIni;
     Calculate;
   end;
@@ -304,26 +447,13 @@ begin
   FGenerator := TLiss3dGen.Create;
 
   FViewer := TLiss3dViewerFrame.Create(self);
-  FViewer.Parent := Panel2;
+  FViewer.Parent := ParamPanel;
   FViewer.Align := alClient;
   FViewer.BorderSpacing.Right := 4;
   FViewer.OnMouseMove := @ViewerMouseMove;
 
   // Add built-in formulas
-  edFormulaX.Items.Clear;
-  edFormulaX.Items.Add(BUILTIN_FORMULA1_X);
-  edFormulaX.Items.Add(BUILTIN_FORMULA2_X);
-  edFormulaX.Items.Add(BUILTIN_FORMULA3_X);
-
-  edFormulaY.Items.Clear;
-  edFormulaY.Items.Add(BUILTIN_FORMULA1_Y);
-  edFormulaY.Items.Add(BUILTIN_FORMULA2_Y);
-  edFormulaY.Items.Add(BUILTIN_FORMULA3_Y);
-
-  edFormulaZ.Items.Clear;
-  edFormulaZ.Items.Add(BUILTIN_FORMULA1_Z);
-  edFormulaZ.Items.Add(BUILTIN_FORMULA2_Z);
-  edFormulaZ.Items.Add(BUILTIN_FORMULA3_Z);
+  AddBuiltinFormulas;
 
   edFormulaX.DropDownCount := 24;
   edFormulaY.DropDownCount := 24;
@@ -490,7 +620,10 @@ begin
     SetBounds(L, T, W, H);
     WindowState := wsNormal;
     Application.ProcessMessages;
-    WindowState := TWindowState(ini.ReadInteger('Position', 'WindowState', 0));
+    WindowState := TWindowState(ini.ReadInteger('MainForm', 'WindowState', 0));
+    ParamPanel.Width := ini.ReadInteger('MainForm', 'ParamPanelWidth', ParamPanel.Width);
+
+    inc(FViewerLock);
 
     edFormulaX.Items.Clear;
     edFormulaY.Items.Clear;
@@ -510,11 +643,15 @@ begin
             'z': edFormulaZ.Items.Add(s);
           end;
       end;
+      AddBuiltinFormulas;
     finally
       List.Free;
     end;
 
     LoadLissParams(ini);
+    dec(FViewerLock);
+
+    { Calculate    // <--- is executed by caller. }
   finally
     ini.Free;
   end;
@@ -562,17 +699,6 @@ begin
   ini.WriteFloat(section, 'RotationZ', FViewer.CameraRotZ);
 end;
 
-procedure TMainForm.tbLoadParamsClick(Sender: TObject);
-begin
-  with OpenDialog do
-  begin
-    Filter := 'Lissajous 3D files|*.l3d';
-    DefaultExt := '.l3d';
-    if Execute then
-      LoadParamFile(FileName);
-  end;
-end;
-
 procedure TMainForm.LoadParamFile(const AFileName: String);
 var
   F: file of TLissFileRec;
@@ -598,83 +724,9 @@ begin
   end;
 
   Calculate;
-  //FViewer.Invalidate;
 
   FRecentFilesManager.AddToRecent(AFileName);
   Caption := APP_NAME + ' - ' + AFileName;
-end;
-
-procedure TMainForm.tbSaveAsBitmapClick(Sender: TObject);
-var
-  ext: string;
-  bm: TCustomBitmap;
-begin
-  with SaveDialog do
-  begin
-    Filter := 'BMP files|*.bmp|PNG files|*.png|JPEG files|*.jpg;*.jpeg';
-    FilterIndex := 2;
-    if Execute then
-    begin
-      ext := ExtractFileExt(FileName);
-      case ext of
-        '.bmp': bm := TBitmap.Create;
-        '.png': bm := TPortableNetworkGraphic.Create;
-        '.jpg', '.jpeg': bm := TJpegImage.Create;
-        else raise Exception.Create('Image type not supported.');
-      end;
-      try
-        FViewer.ToBitmap(bm);
-        bm.SaveToFile(FileName);
-      finally
-        bm.Free;
-      end;
-    end;
-  end;
-end;
-
-// Save settings of drawing
-procedure TMainForm.tbSaveParamsClick(Sender: TObject);
-var
-  ini: TCustomIniFile;
-begin
-  with SaveDialog do
-  begin
-    Filter := 'Lissajous 3D files|*.l3d';
-    DefaultExt := '.l3d';
-    if Execute then
-    begin
-      ini := TIniFile.Create(FileName);
-      try
-        SaveLissParams(ini);
-        FRecentFilesManager.AddToRecent(FileName);
-      finally
-        ini.Free;
-      end;
-    end;
-  end;
-end;
-
-procedure TMainForm.tbResetClick(Sender: TObject);
-begin
-  seCoeffA.Value := 0.0;
-  seCoeffB.Value := 0.0;
-  seCoeffC.Value := 0.0;
-  seCoeffD.value := 0.0;
-  seStepCount.Value := 0;
-  seStepSize.Value := 1.0;
-  cbSymbolColor.ButtonColor := SYMBOL_COLOR;
-  cbBackgroundColor.ButtonColor := clBlack;
-  cbViewDirection.ItemIndex := 1;
-  cbShowAxes.Checked := false;
-  cbTeleLens.Checked := false;
-  FViewer.CameraDistance := CAMERA_DISTANCE;
-  FViewer.CameraAngle := VIEW_ANGLE;
-  FViewer.CameraRotX := 0;
-  FViewer.CameraRotY := 0;
-  FViewer.CameraRotZ := 0;
-  FViewer.ShowAxes := cbShowAxes.Checked;
-  FViewer.SymbolColor := cbSymbolColor.ButtonColor;
-  FViewer.BackColor := cbBackgroundColor.ButtonColor;
 end;
 
 function TMainForm.UnpackParams(AData: TLissFileRec): Boolean;
@@ -820,6 +872,7 @@ begin
     ini.WriteInteger('MainForm', 'Width', RestoredWidth);
     ini.WriteInteger('MainForm', 'Height', RestoredHeight);
     ini.WriteInteger('MainForm', 'WindowState', Integer(WindowState));
+    ini.WriteInteger('MainForm', 'ParamPanelWidth', ParamPanel.Width);
 
     for i:=0 to edFormulaX.Items.Count-1 do
       ini.WriteString('FormulaHistory', 'x' + IntToStr(i), edFormulaX.Items[i]);

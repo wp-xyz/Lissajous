@@ -10,9 +10,7 @@ uses
   athreads,
   {$ENDIF}
   Interfaces, // this includes the LCL widgetset
-  Forms, uMain, lazopenglcontext, uLiss3dGen, uLiss3DTypes, 
-uLiss3dViewGL, mrumanager
-  { you can add units after this };
+  Forms, uMain;
 
 {$R *.res}
 
