@@ -1,7 +1,6 @@
 [Formula]
-Selection=2
-x=sin(a*t) * (1 + cos(b*t)) / 2
-y=sin(a*t) * (1 + sin(c*t)) / 2
+x=(cos(a*t)+cos(b*t))/2
+y=(sin(a*t)+sin(c*t))/2
 z=sin(d*t)
 a=-9
 b=-1
@@ -12,13 +11,13 @@ StepSize=0.5
 
 [Rendering]
 BackgroundColor=15646350
-SymbolColor=16746632
-ViewPlane=4
-ShowAxes=0
+SymbolColor=16744576
+ViewPlane=0
+ShowAxes=1
 TeleLens=1
 SymbolSize=0.05
 CameraAngle=10
 CameraDistance=3.26147586904795
-RotationX=45
-RotationY=-45
-RotationZ=0
+RotationX=-5
+RotationY=-198
+RotationZ=170

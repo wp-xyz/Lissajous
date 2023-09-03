@@ -45,6 +45,7 @@ type
     FSymbolColor: TColor;
     FSymbolSize: Double;
     procedure SetBackColor(AValue: TColor);
+    procedure SetPoints(const AValue: TPoint3dArray);
     procedure SetShowAxes(AValue: Boolean);
     procedure SetSymbolColor(AValue: TColor);
 
@@ -68,7 +69,7 @@ type
     property CameraRotX: Double read FCameraRotX write FCameraRotX;
     property CameraRotY: Double read FCameraRotY write FCameraRotY;
     property CameraRotZ: Double read FCameraRotZ write FCameraRotZ;
-    property Points: TPoint3dArray read FPoints write FPoints;
+    property Points: TPoint3dArray read FPoints write SetPoints;
     property ShowAxes: Boolean read FShowAxes write SetShowAxes;
     property SymbolColor: TColor read FSymbolColor write SetSymbolColor;
     property SymbolSize: Double read FSymbolSize write FSymbolSize;
@@ -355,6 +356,12 @@ begin
     exit;
   FBackColor := AValue;
   OpenGLControl.Invalidate;
+end;
+
+procedure TLiss3dViewerFrame.SetPoints(const AValue: TPoint3dArray);
+begin
+  SetLength(FPoints, Length(AValue));
+  Move(AValue[0], FPoints[0], Length(AValue) * Sizeof(TPoint3d));
 end;
 
 procedure TLiss3dViewerFrame.SetShowAxes(AValue: Boolean);

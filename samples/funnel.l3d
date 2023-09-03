@@ -1,5 +1,4 @@
 [Formula]
-Selection=4
 x=cos(a*t)*exp(-d*t)
 y=sin(b*t)*exp(-d*t)
 z=0.1*(t-10)

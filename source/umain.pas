@@ -5,11 +5,11 @@ unit uMain;
 
 interface
 
-uses
+uses                                                  lazloggerbase,
   Classes, SysUtils, LCLType, LCLIntf, Types, IniFiles,
   Forms, Controls, Graphics, Dialogs, ExtCtrls,
   StdCtrls, ComCtrls, Spin, Buttons, Menus,
-  fpExprPars, mrumanager, gl, glu,
+  mrumanager, gl, glu,
   uLiss3dTypes, uLiss3dGen, uLiss3dViewGL;
 
 type
@@ -47,28 +47,28 @@ type
     lblStepCount: TLabel;
     OpenDialog: TOpenDialog;
     RecentFilesPopup: TPopupMenu;
-    rbUserFormula: TRadioButton;
-    rbFormula2: TRadioButton;
-    rbFormula3: TRadioButton;
     SaveDialog: TSaveDialog;
     seCoeffA: TFloatSpinEdit;
     GroupBox1: TGroupBox;
     GroupBox2: TGroupBox;
     Panel1: TPanel;
     Panel2: TPanel;
-    rbFormula1: TRadioButton;
     seCoeffD: TFloatSpinEdit;
     seCoeffC: TFloatSpinEdit;
     seCoeffB: TFloatSpinEdit;
     seStepSize: TFloatSpinEdit;
     seStepCount: TSpinEdit;
-    btnCalculate: TSpeedButton;
+    Splitter1: TSplitter;
     ToolBar: TToolBar;
     tbLoadParams: TToolButton;
     tbSaveParams: TToolButton;
     tbSaveAsBitmap: TToolButton;
     tbReset: TToolButton;
     tbExit: TToolButton;
+    ToolButton1: TToolButton;
+    ToolButton2: TToolButton;
+    tbCalculate: TToolButton;
+    ToolButton3: TToolButton;
     procedure ApplicationPropertiesIdle(Sender: TObject; var Done: Boolean);
     procedure cbBackgroundColorColorChanged(Sender: TObject);
     procedure cbShowAxesChange(Sender: TObject);
@@ -79,8 +79,7 @@ type
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
-    procedure rbFormulaChange(Sender: TObject);
-    procedure btnCalculateClick(Sender: TObject);
+    procedure tbCalculateClick(Sender: TObject);
     procedure tbExitClick(Sender: TObject);
     procedure tbLoadParamsClick(Sender: TObject);
     procedure tbSaveAsBitmapClick(Sender: TObject);
@@ -92,26 +91,20 @@ type
     FGenerator: TLiss3dGen;
     FViewer: TLiss3dViewerFrame;
     FViewerLock: Integer;
-    FParsers: array[0..2] of TFPExpressionParser;
     procedure ViewerMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
 
   private
     // Formulas
     procedure Calculate;
-    procedure Formula1(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
-    procedure Formula2(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
-    procedure Formula3(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
-    procedure FormulaUser(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
     procedure UpdateFormulaHistory;
 
   private
     // Parameters
     procedure LoadLissParams(ini: TCustomIniFile);
     procedure LoadParamFile(const AFileName: String);
-    procedure PackParams(out AData: TLissFileRec);
+//    procedure PackParams(out AData: TLissFileRec);
     procedure SaveLissParams(ini: TCustomIniFile);
     function UnpackParams(AData: TLissFileRec): Boolean;
-    procedure UpdateCoeffState;
     procedure UpdateLissParams;
 
   private
@@ -156,6 +149,17 @@ const
   ColorList: array[0..6] of dword =
     ($ffffff, $ff0000, $00ff00, $0000ff, $ffff00, $ff00ff, $00ffff);
 
+  BUILTIN_FORMULA1_X = 'cos(a*t)';
+  BUILTIN_FORMULA1_Y = 'sin(b*t)';
+  BUILTIN_FORMULA1_Z = 'sin(c*t)';
+
+  BUILTIN_FORMULA2_X = '(cos(a*t)+cos(b*t))/2';
+  BUILTIN_FORMULA2_Y = '(sin(a*t)+sin(c*t))/2';
+  BUILTIN_FORMULA2_Z = 'sin(d*t)';
+
+  BUILTIN_FORMULA3_X = 'sin(a*t)*(1.0+cos(b*t))/2';
+  BUILTIN_FORMULA3_Y = 'sin(a*t)*(1.0+sin(c*t))/2';
+  BUILTIN_FORMULA3_Z = 'sin(d*t)';
 
 { TMainForm }
 
@@ -172,11 +176,6 @@ begin
   ]);
 end;
 
-procedure TMainForm.btnCalculateClick(Sender: TObject);
-begin
-  Calculate;
-end;
-
 procedure TMainForm.tbExitClick(Sender: TObject);
 begin
   Close;
@@ -188,8 +187,7 @@ begin
     exit;
 
   UpdateLissParams;
-  FGenerator.Calculate;
-  FViewer.Points := FGenerator.Points;
+  FViewer.Points := FGenerator.Calculate;
   FViewer.Invalidate;
   UpdateFormulaHistory;
 end;
@@ -285,28 +283,31 @@ begin
   FViewer := TLiss3dViewerFrame.Create(self);
   FViewer.Parent := Panel2;
   FViewer.Align := alClient;
-//  FViewer.BorderSpacing.Around := 8;
+  FViewer.BorderSpacing.Right := 4;
   FViewer.OnMouseMove := @ViewerMouseMove;
 
-  for i := 0 to 2 do
-  begin
-    FParsers[i] := TFPExpressionParser.Create(Self);
-    FParsers[i].BuiltIns := [bcMath];
-    FParsers[i].Identifiers.AddFloatVariable('t', 0.0);
-    FParsers[i].Identifiers.AddFloatVariable('a', 0.0);
-    FParsers[i].Identifiers.AddFloatVariable('b', 0.0);
-    FParsers[i].Identifiers.AddFloatVariable('c', 0.0);
-    FParsers[i].Identifiers.AddFloatVariable('d', 0.0);
-  end;
+  // Add built-in formulas
+  edFormulaX.Items.Clear;
+  edFormulaX.Items.Add(BUILTIN_FORMULA1_X);
+  edFormulaX.Items.Add(BUILTIN_FORMULA2_X);
+  edFormulaX.Items.Add(BUILTIN_FORMULA3_X);
 
-  UpdateCoeffState;
+  edFormulaY.Items.Clear;
+  edFormulaY.Items.Add(BUILTIN_FORMULA1_Y);
+  edFormulaY.Items.Add(BUILTIN_FORMULA2_Y);
+  edFormulaY.Items.Add(BUILTIN_FORMULA3_Y);
+
+  edFormulaZ.Items.Clear;
+  edFormulaZ.Items.Add(BUILTIN_FORMULA1_Z);
+  edFormulaZ.Items.Add(BUILTIN_FORMULA2_Z);
+  edFormulaZ.Items.Add(BUILTIN_FORMULA3_Z);
 end;
 
 procedure TMainForm.FormDestroy(Sender: TObject);
 begin
   FGenerator.Free;
 end;
-
+                              (*
 procedure TMainForm.Formula1(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
 begin
   P.X := cos(ACoeffs[0] * t);
@@ -342,7 +343,7 @@ begin
   P.X := ArgToFloat(FParsers[0].Evaluate);
   P.Y := ArgToFloat(FParsers[1].Evaluate);
   P.Z := ArgToFloat(FParsers[2].Evaluate);
-end;
+end;                *)
 
 function TMainForm.GetIniFileName: String;
 begin
@@ -352,7 +353,6 @@ end;
 procedure TMainForm.LoadLissParams(ini: TCustomIniFile);
 var
   section: String;
-  idx: Integer;
 begin
   Assert(ini <> nil);
 
@@ -362,19 +362,9 @@ begin
   ini.Options := ini.Options + [ifoFormatSettingsActive];
 
   section := 'Formula';
-  idx := ini.ReadInteger(section, 'Selection', 0);
-  case idx of
-    1: rbFormula1.Checked := true;
-    2: rbFormula2.Checked := true;
-    3: rbFormula3.Checked := true;
-    4: begin
-         rbUserFormula.Checked := true;
-         edFormulaX.Text := ini.ReadString(section, 'x', '');
-         edFormulaY.Text := ini.ReadString(section, 'y', '');
-         edFormulaZ.Text := ini.ReadString(section, 'z', '');
-       end;
-  end;
-  rbFormulaChange(nil);
+  edFormulaX.Text := ini.ReadString(section, 'x', '');
+  edFormulaY.Text := ini.ReadString(section, 'y', '');
+  edFormulaZ.Text := ini.ReadString(section, 'z', '');
 
   seCoeffA.Value := ini.ReadFloat(section, 'a', 0.0);
   seCoeffB.Value := ini.ReadFloat(section, 'b', 0.0);
@@ -399,7 +389,7 @@ begin
 
   dec(FViewerLock);
 end;
-
+               (*
 procedure TMainForm.PackParams(out AData: TLissFileRec);
 var
   i: byte;
@@ -438,32 +428,10 @@ begin
   x := seCoeffC.Value;  AData[14] := PDWord(@x)^;
   x := seCoeffD.Value;  AData[15] := PDWord(@x)^;
 end;
+*)
 
-procedure TMainForm.rbFormulaChange(Sender: TObject);
+procedure TMainForm.tbCalculateClick(Sender: TObject);
 begin
-  if rbFormula1.Checked then
-  begin
-    edFormulaX.Text := 'cos(a*t)';
-    edFormulaY.Text := 'sin(b*t)';
-    edFormulaZ.Text := 'sin(c*t)';
-  end;
-  if rbFormula2.Checked then
-  begin
-    edFormulaX.Text := '(cos(a*t) + cos (b*t)) / 2';
-    edFormulaY.Text := '(sin(a*t) + sin(c*t)) / 2';
-    edFormulaZ.Text := 'sin(d*t)';
-  end;
-  if rbFormula3.Checked then
-  begin
-    edFormulaX.Text := 'sin(a*t) * (1 + cos(b*t)) / 2';
-    edFormulaY.Text := 'sin(a*t) * (1 + sin(c*t)) / 2';
-    edFormulaZ.Text := 'sin(d*t)';
-  end;
-  edFormulaX.Enabled := rbUserFormula.Checked;
-  edFormulaY.Enabled := rbUserFormula.Checked;
-  edFormulaZ.Enabled := rbUserFormula.Checked;
-
-  UpdateCoeffState;
   Calculate;
 end;
 
@@ -532,26 +500,13 @@ end;
 procedure TMainForm.SaveLissParams(ini: TCustomIniFile);
 var
   section: String;
-  idx: Integer;
 begin
   Assert(ini <> nil);
 
   ini.FormatSettings.DecimalSeparator := '.';
   ini.Options := ini.Options + [ifoFormatSettingsActive];
 
-  if rbFormula1.Checked then
-    idx := 1
-  else if rbFormula2.checked then
-    idx := 2
-  else if rbFormula3.Checked then
-    idx := 3
-  else if rbUserFormula.Checked then
-    idx := 4
-  else
-    raise Exception.Create('Illegal formula selection');
-
   section := 'Formula';
-  ini.WriteInteger(section, 'Selection', idx);
   ini.WriteString(section, 'x', edFormulaX.Text);
   ini.WriteString(section, 'y', edFormulaY.Text);
   ini.WriteString(section, 'z', edFormulaZ.Text);
@@ -581,8 +536,12 @@ end;
 procedure TMainForm.tbLoadParamsClick(Sender: TObject);
 begin
   with OpenDialog do
+  begin
+    Filter := 'Lissajous 3D files|*.l3d';
+    DefaultExt := '.l3d';
     if Execute then
       LoadParamFile(FileName);
+  end;
 end;
 
 procedure TMainForm.LoadParamFile(const AFileName: String);
@@ -610,6 +569,7 @@ begin
   end;
 
   Calculate;
+  FViewer.Invalidate;
 
   FRecentFilesManager.AddToRecent(AFileName);
   Caption := APP_NAME + ' - ' + AFileName;
@@ -646,44 +606,27 @@ end;
 // Save settings of drawing
 procedure TMainForm.tbSaveParamsClick(Sender: TObject);
 var
-{$IFDEF OLD_FILE_FORMAT}
-  F: File of TLoadSave;
-  data: TLoadSave;
-{$ELSE}
   ini: TCustomIniFile;
-{$ENDIF}
 begin
   with SaveDialog do
   begin
-    Filter := 'Lissajous files|*.l3d';
+    Filter := 'Lissajous 3D files|*.l3d';
     DefaultExt := '.l3d';
     if Execute then
     begin
-     {$IFDEF OLD_FILE_FORMAT}
-      try
-        PackFile(data);
-        AssignFile(F, FileName);
-        ReWrite(F);
-        Write(F, data);
-      finally
-        CloseFile(F);
-      end;
-     {$ELSE}
       ini := TIniFile.Create(FileName);
       try
         SaveLissParams(ini);
+        FRecentFilesManager.AddToRecent(FileName);
       finally
         ini.Free;
       end;
-     {$ENDIF}
-      FRecentFilesManager.AddToRecent(FileName);
     end;
   end;
 end;
 
 procedure TMainForm.tbResetClick(Sender: TObject);
 begin
-  rbFormula1.Checked := true;
   seCoeffA.Value := 0.0;
   seCoeffB.Value := 0.0;
   seCoeffC.Value := 0.0;
@@ -726,12 +669,22 @@ begin
 
   // Formula
   case AData[5] of
-    1: rbFormula1.Checked := true;
-    2: rbFormula2.Checked := true;
-    3: rbFormula3.Checked := true;
-    else rbFormula1.Checked := true;
+    1: begin
+         edFormulaX.Text := BUILTIN_FORMULA1_X;
+         edFormulaY.Text := BUILTIN_FORMULA1_Y;
+         edFormulaZ.Text := BUILTIN_FORMULA1_Z;
+       end;
+    2: begin
+         edFormulaX.Text := BUILTIN_FORMULA2_X;
+         edFormulaY.Text := BUILTIN_FORMULA2_Y;
+         edFormulaZ.Text := BUILTIN_FORMULA2_Z;
+       end;
+    3: begin
+         edFormulaX.Text := BUILTIN_FORMULA3_X;
+         edFormulaY.Text := BUILTIN_FORMULA3_Y;
+         edFormulaZ.Text := BUILTIN_FORMULA3_Z;
+       end;
   end;
-  rbFormulaChange(nil);
 
   penNr := AData[6];
 
@@ -772,25 +725,21 @@ begin
   Result := true;
 end;
 
-procedure TMainForm.UpdateCoeffState;
-begin
-  seCoeffD.Enabled := not rbFormula1.Checked;
-  lblCoeffD.Enabled := not rbFormula1.Checked;
-end;
-
 procedure TMainForm.UpdateFormulaHistory;
 
   procedure UpdateHistory(ACombobox: TCombobox);
   var
     s: String;
     idx: Integer;
-    itemIdx: Integer;
   begin
     s := ACombobox.Text;
     if s = '' then
       exit;
-    itemIdx := ACombobox.ItemIndex;
+
     idx := ACombobox.Items.IndexOf(s);
+    if idx = 0 then
+      exit;
+
     if idx = -1 then
     begin
       ACombobox.Items.Insert(0, s);
@@ -798,7 +747,7 @@ procedure TMainForm.UpdateFormulaHistory;
         ACombobox.Items.Delete(ACombobox.Items.Count-1);
     end else
       AComboBox.Items.Move(idx, 0);
-    Acombobox.ItemIndex := itemIdx;
+    Acombobox.ItemIndex := 0;
   end;
 
 begin
@@ -814,26 +763,10 @@ end;
 
 procedure TMainForm.UpdateLissParams;
 begin
-  FGenerator.SetCoeffs([seCoeffA.Value, seCoeffB.Value, seCoeffC.Value, seCoeffD.Value]);
+  FGenerator.SetCoeffs(seCoeffA.Value, seCoeffB.Value, seCoeffC.Value, seCoeffD.Value);
+  FGenerator.SetFormulas(edFormulaX.Text, edFormulaY.Text, edFormulaZ.Text);
   FGenerator.StepCount := seStepCount.Value;
   FGenerator.StepSize := seStepSize.Value * pi/180;
-
-  if rbFormula1.Checked then
-    FGenerator.Formula := @Formula1
-  else
-  if rbFormula2.Checked then
-    FGenerator.Formula := @Formula2
-  else
-  if rbFormula3.Checked then
-    FGenerator.Formula := @Formula3
-  else
-  if rbUserFormula.Checked then
-  begin
-    FParsers[0].Expression := edFormulaX.Text;
-    FParsers[1].Expression := edFormulaY.Text;
-    FParsers[2].Expression := edFormulaZ.Text;
-    FGenerator.Formula := @FormulaUser;
-  end;
 end;
 
 procedure TMainForm.ViewerMouseMove(Sender: TObject;

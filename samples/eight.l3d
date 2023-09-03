@@ -1,5 +1,4 @@
 [Formula]
-Selection=4
 x=sin(a*t)
 y=sin(b*t)
 z=sin(c*t)

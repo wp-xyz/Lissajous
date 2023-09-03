@@ -7,28 +7,33 @@ unit uLiss3dGen;
 interface
 
 uses
-  Classes, SysUtils,  uLiss3dTypes;
+  Classes, SysUtils, fpExprPars,
+  uLiss3dTypes;
 
 type
-  TLissCoeffs = array of Double;
-  TLissFormula = procedure(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D) of object;
-
   TLiss3dGen = class
   private
-    FCoeffs: TLissCoeffs;
+    FParsers: array[0..2] of TFPExpressionParser;
+    FFormulas: array[0..2] of string;
     FStepCount: Integer;
     FStepSize: Double;
-    FFormula: TLissFormula;
+    function GetCoeff(const AName: String): Double;
+    function GetFormula(AIndex: Integer): String;
+    procedure SetCoeff(const AName: String; AValue: Double);
+    procedure SetFormula(AIndex: Integer; const AValue: String);
   protected
 
   public
-    Points: TPoint3dArray;
-
     constructor Create;
     destructor Destroy; override;
-    procedure Calculate;
-    procedure SetCoeffs(const AValue: TLissCoeffs);
-    property Formula: TLissFormula read FFormula write FFormula;
+    function Calculate: TPoint3dArray;
+    procedure SetCoeffs(a, b, c, d: Double);
+    procedure SetFormulas(const AFormulaX, AFormulaY, AFormulaZ: String);
+
+    property FormulaX: string index 0 read GetFormula write SetFormula;
+    property FormulaY: string index 1 read GetFormula write SetFormula;
+    property FormulaZ: string index 2 read GetFormula write SetFormula;
+    property Coeff[AName: String]: Double read GetCoeff write SetCoeff;
     property StepCount: Integer read FStepCount write FStepCount;
     property StepSize: Double read FStepSize write FStepSize;
   end;
@@ -36,56 +41,114 @@ type
 implementation
 
 constructor TLiss3dGen.Create;
+{
+var
+  pars: TFPExpressionParser;
 begin
-  SetLength(FCoeffs, 4);
-  FCoeffs[0] := 1.0;
-  FCoeffs[1] := 0.0;
-  FCoeffs[2] := 0.0;
-  FCoeffs[3] := 0.0;
+  for pars in FParsers do
+  begin
+    pars := TFPExpressionParser.Create(nil);
+    pars.BuiltIns := [bcMath];
+    pars.Identifiers.AddFloatVariable('t', 0.0);
+    pars.Identifiers.AddFloatVariable('a', 0.0);
+    pars.Identifiers.AddFloatVariable('b', 0.0);
+    pars.Identifiers.AddFloatVariable('c', 0.0);
+    pars.Identifiers.AddFloatVariable('d', 0.0);
+  end;
+  FStepCount := 400;
+  FStepSize := pi/180.0;
+end;
+}
+var
+  i: Integer;
+begin
+  for i := 0 to 2 do
+  begin
+    FParsers[i] := TFPExpressionParser.Create(nil);
+    FParsers[i].BuiltIns := [bcMath];
+    FParsers[i].Identifiers.AddFloatVariable('t', 0.0);
+    FParsers[i].Identifiers.AddFloatVariable('a', 0.0);
+    FParsers[i].Identifiers.AddFloatVariable('b', 0.0);
+    FParsers[i].Identifiers.AddFloatVariable('c', 0.0);
+    FParsers[i].Identifiers.AddFloatVariable('d', 0.0);
+  end;
+
   FStepCount := 400;
   FStepSize := pi/180.0;
 end;
 
 destructor TLiss3dGen.Destroy;
+var
+  i: Integer;
 begin
+  for i := 0 to 2 do
+    FParsers[i].Free;
   inherited;
 end;
 
-procedure TLiss3dGen.Calculate;
-const
-  EPS = 1E-9;
+function TLiss3dGen.Calculate: TPoint3dArray;
 var
   t: Double;
-  i: Integer;
+  i, j: Integer;
   P: TPoint3d;
+  PArr: array[0..2] of double;
 begin
-  if not Assigned(FFormula) then
-    exit;
-
-  SetLength(Points, FStepCount);
+  SetLength(Result, FStepCount);
   for i := 0 to FStepCount-1 do
   begin
     t := FStepSize * i;
-    FFormula(t, FCoeffs, P);
-    Points[i] := P;
+    for j := 0 to 2 do
+    begin
+      FParsers[j].Identifiers.IdentifierByName('t').AsFloat := t;
+      pArr[j] := ArgToFloat(FParsers[j].Evaluate);
+    end;
+    Result[i] := PPoint3D(@pArr)^;
     {
-    if (i > 0) and
-       SameValue(P.X, Points[0].X, EPS) and
-       SameValue(P.Y, Points[0].Y, EPS) and
-       SameValue(P.Z, Points[0].Z, EPS)
-    then
-      exit;
-      }
+    P.X := ArgToFloat(FParsers[0].Evaluate);
+    P.Y := ArgToFloat(FParsers[1].Evaluate);
+    P.Z := ArgToFloat(FParsers[2].Evaluate);
+    Result[i] := P;
+    }
   end;
 end;
 
-procedure TLiss3dGen.SetCoeffs(const AValue: TLissCoeffs);
+function TLiss3dGen.GetCoeff(const AName: String): Double;
+begin
+  Result := FParsers[0].Identifiers.FindIdentifier(AName).AsFloat;
+end;
+
+function TLiss3dGen.GetFormula(AIndex: Integer): String;
+begin
+  Result := FFormulas[AIndex];
+end;
+
+procedure TLiss3dGen.SetCoeff(const AName: String; AValue: Double);
 var
   i: Integer;
 begin
-  SetLength(FCoeffs, Length(AValue));
-  for i := Low(AValue) to High(AValue) do
-    FCoeffs[i] := AValue[i];
+  for i := 0 to High(FParsers) do
+    FParsers[i].Identifiers.IdentifierByName(AName).AsFloat := AValue;
+end;
+
+procedure TLiss3dGen.SetCoeffs(a, b, c, d: Double);
+begin
+  SetCoeff('a', a);
+  SetCoeff('b', b);
+  SetCoeff('c', c);
+  SetCoeff('d', d);
+end;
+
+procedure TLiss3dGen.SetFormula(AIndex: Integer; const AValue: String);
+begin
+  FFormulas[AIndex] := AValue;
+  FParsers[AIndex].Expression := AValue;
+end;
+
+procedure TLiss3dGen.SetFormulas(const AFormulaX, AFormulaY, AFormulaZ: String);
+begin
+  SetFormula(0, AFormulaX);
+  SetFormula(1, AFormulaY);
+  SetFormula(2, AFormulaZ);
 end;
 
 end.

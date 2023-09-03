@@ -11,6 +11,7 @@ type
   TPoint3d = record
     x, y, z: Double;
   end;
+  PPoint3d = ^TPoint3d;
 
   TPoint3dArray = array of TPoint3d;
 
