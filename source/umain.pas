@@ -75,6 +75,7 @@ type
     procedure cbSymbolColorColorChanged(Sender: TObject);
     procedure cbTeleLensChange(Sender: TObject);
     procedure cbViewDirectionChange(Sender: TObject);
+    procedure edFormulaDropDown(Sender: TObject);
     procedure FormActivate(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure FormCreate(Sender: TObject);
@@ -129,8 +130,7 @@ implementation
 {$R *.lfm}
 
 uses
-  //FPImage,
-  GraphType;
+  Math; //, GraphType;
 
 const
   APP_NAME = 'Lissajous Curve Generator';
@@ -183,13 +183,13 @@ end;
 
 procedure TMainForm.Calculate;
 begin
-  if FViewerLock > 0 then
-    exit;
-
-  UpdateLissParams;
-  FViewer.Points := FGenerator.Calculate;
-  FViewer.Invalidate;
-  UpdateFormulaHistory;
+  if FViewerLock = 0 then
+  begin
+    UpdateLissParams;
+    FViewer.Points := FGenerator.Calculate;
+    FViewer.Invalidate;
+    UpdateFormulaHistory;
+  end;
 end;
 
 procedure TMainForm.cbBackgroundColorColorChanged(Sender: TObject);
@@ -248,6 +248,28 @@ begin
   FViewer.InvalidateView;
 end;
 
+procedure TMainForm.edFormulaDropDown(Sender: TObject);
+var
+  bmp: TBitmap;
+  combobox: TCombobox;
+  i, w: Integer;
+begin
+  if not (Sender is TComboBox) then
+    exit;
+  combobox := TComboBox(Sender);
+  bmp := TBitmap.Create;
+  try
+    bmp.SetSize(1, 1);
+    bmp.Canvas.Font.Assign(combobox.Font);
+    w := 0;
+    for i := 0 to combobox.Items.Count-1 do
+      w := Max(w, bmp.Canvas.TextWidth(combobox.Items[i]));
+    combobox.ItemWidth := w + 20;
+  finally
+    bmp.Free;
+  end;
+end;
+
 procedure TMainForm.FormActivate(Sender: TObject);
 begin
   if not FActivated then
@@ -271,7 +293,8 @@ begin
   Caption := APP_NAME;
 
   FRecentFilesManager := TMRUMenuManager.Create(self);
-  FRecentFilesManager.MenuCaptionMask := '%0:x - %s';
+  FRecentFilesManager.MenuCaptionMask := '%0:d - %1:s';
+  FRecentFilesManager.MaxRecent := 24;
 //  FRecentFilesManager.MenuItem := mnuRecentlyOpened;
   FRecentFilesManager.PopupMenu := RecentFilesPopup;
   FRecentFilesManager.OnRecentFile := @RecentFileHandler;
@@ -301,6 +324,10 @@ begin
   edFormulaZ.Items.Add(BUILTIN_FORMULA1_Z);
   edFormulaZ.Items.Add(BUILTIN_FORMULA2_Z);
   edFormulaZ.Items.Add(BUILTIN_FORMULA3_Z);
+
+  edFormulaX.DropDownCount := 24;
+  edFormulaY.DropDownCount := 24;
+  edFormulaZ.DropDownCount := 24;
 end;
 
 procedure TMainForm.FormDestroy(Sender: TObject);
@@ -386,6 +413,8 @@ begin
   FViewer.CameraRotX := ini.ReadFloat(section, 'RotationX', FViewer.CameraRotX);
   FViewer.CameraRotY := ini.ReadFloat(section, 'RotationY', FViewer.CameraRotY);
   FViewer.CameraRotZ := ini.ReadFloat(section, 'RotationZ', FViewer.CameraRotZ);
+
+  FViewer.ShowAxes := cbShowAxes.Checked;
 
   dec(FViewerLock);
 end;
@@ -569,7 +598,7 @@ begin
   end;
 
   Calculate;
-  FViewer.Invalidate;
+  //FViewer.Invalidate;
 
   FRecentFilesManager.AddToRecent(AFileName);
   Caption := APP_NAME + ' - ' + AFileName;
@@ -643,6 +672,9 @@ begin
   FViewer.CameraRotX := 0;
   FViewer.CameraRotY := 0;
   FViewer.CameraRotZ := 0;
+  FViewer.ShowAxes := cbShowAxes.Checked;
+  FViewer.SymbolColor := cbSymbolColor.ButtonColor;
+  FViewer.BackColor := cbBackgroundColor.ButtonColor;
 end;
 
 function TMainForm.UnpackParams(AData: TLissFileRec): Boolean;

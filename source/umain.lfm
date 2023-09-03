@@ -83,6 +83,7 @@ object MainForm: TMainForm
         BorderSpacing.Right = 8
         ItemHeight = 15
         TabOrder = 0
+        OnDropDown = edFormulaDropDown
       end
       object edFormulaY: TComboBox
         AnchorSideLeft.Control = lblYEquals
@@ -101,6 +102,7 @@ object MainForm: TMainForm
         BorderSpacing.Right = 8
         ItemHeight = 15
         TabOrder = 1
+        OnDropDown = edFormulaDropDown
       end
       object edFormulaZ: TComboBox
         AnchorSideLeft.Control = lblZEquals
@@ -120,6 +122,7 @@ object MainForm: TMainForm
         BorderSpacing.Bottom = 8
         ItemHeight = 15
         TabOrder = 2
+        OnDropDown = edFormulaDropDown
       end
     end
     object GroupBox2: TGroupBox
