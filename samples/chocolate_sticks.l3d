@@ -1,0 +1,24 @@
+[Formula]
+Selection=2
+x=sin(a*t) * (1 + cos(b*t)) / 2
+y=sin(a*t) * (1 + sin(c*t)) / 2
+z=sin(d*t)
+a=1
+b=1
+c=15
+d=0.01
+StepCount=5000
+StepSize=4
+
+[Rendering]
+BackgroundColor=4227072
+SymbolColor=16512
+ViewPlane=0
+ShowAxes=0
+TeleLens=0
+SymbolSize=0.05
+CameraAngle=45
+CameraDistance=3.38686953431496
+RotationX=-28
+RotationY=-530
+RotationZ=151

@@ -9,6 +9,16 @@ uses
   gl, glu, OpenGLContext,
   uLiss3dTypes;
 
+const
+  VIEW_ANGLE = 45; //60.0;
+  NEAR_CLIPDIST = 0.1;
+  FAR_CLIPDIST = 100;
+
+  CAMERA_DISTANCE = 5.0;
+
+  SYMBOL_COLOR = clRed;
+  SYMBOL_SIZE = 0.05;
+
 type
 
   { TViewerFrame }
@@ -70,16 +80,6 @@ implementation
 
 uses
   GraphType;
-
-const
-  VIEW_ANGLE = 45; //60.0;
-  NEAR_CLIPDIST = 0.1;
-  FAR_CLIPDIST = 100;
-
-  CAMERA_DISTANCE = 5.0;
-
-  SYMBOL_COLOR = clRed;
-  SYMBOL_SIZE = 0.05;
 
 procedure OpenGLToBitmap(ABitmap: TCustomBitmap);
 const

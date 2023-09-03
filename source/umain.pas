@@ -67,6 +67,8 @@ type
     tbLoadParams: TToolButton;
     tbSaveParams: TToolButton;
     tbSaveAsBitmap: TToolButton;
+    tbReset: TToolButton;
+    tbExit: TToolButton;
     procedure ApplicationPropertiesIdle(Sender: TObject; var Done: Boolean);
     procedure cbBackgroundColorColorChanged(Sender: TObject);
     procedure cbShowAxesChange(Sender: TObject);
@@ -79,9 +81,11 @@ type
     procedure FormDestroy(Sender: TObject);
     procedure rbFormulaChange(Sender: TObject);
     procedure btnCalculateClick(Sender: TObject);
+    procedure tbExitClick(Sender: TObject);
     procedure tbLoadParamsClick(Sender: TObject);
     procedure tbSaveAsBitmapClick(Sender: TObject);
     procedure tbSaveParamsClick(Sender: TObject);
+    procedure tbResetClick(Sender: TObject);
     procedure UpdateLissajousHandler(Sender: TObject);
   private
     FActivated: Boolean;
@@ -89,25 +93,31 @@ type
     FViewer: TLiss3dViewerFrame;
     FViewerLock: Integer;
     FParsers: array[0..2] of TFPExpressionParser;
-    FRecentFilesManager: TMRUMenuManager;
+    procedure ViewerMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
+
+  private
+    // Formulas
     procedure Calculate;
     procedure Formula1(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
     procedure Formula2(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
     procedure Formula3(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
     procedure FormulaUser(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
-    procedure LoadLissParams(ini: TCustomIniFile);
-    procedure LoadParamFile(const AFileName: String);
-    procedure RecentFileHandler(Sender: TObject; const AFileName: String);
-    procedure SaveLissParams(ini: TCustomIniFile);
-    procedure UpdateCoeffState;
     procedure UpdateFormulaHistory;
-    procedure UpdateLissParams;
-    procedure ViewerMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
 
   private
     // Parameters
+    procedure LoadLissParams(ini: TCustomIniFile);
+    procedure LoadParamFile(const AFileName: String);
     procedure PackParams(out AData: TLissFileRec);
+    procedure SaveLissParams(ini: TCustomIniFile);
     function UnpackParams(AData: TLissFileRec): Boolean;
+    procedure UpdateCoeffState;
+    procedure UpdateLissParams;
+
+  private
+    // Recently used files
+    FRecentFilesManager: TMRUMenuManager;
+    procedure RecentFileHandler(Sender: TObject; const AFileName: String);
 
   private
     // Config
@@ -130,6 +140,8 @@ uses
   GraphType;
 
 const
+  APP_NAME = 'Lissajous Curve Generator';
+
   MAX_FORMULA_COUNT = 20;
 
   CAMERA_ANGLE = 45.0;
@@ -165,6 +177,11 @@ begin
   Calculate;
 end;
 
+procedure TMainForm.tbExitClick(Sender: TObject);
+begin
+  Close;
+end;
+
 procedure TMainForm.Calculate;
 begin
   if FViewerLock > 0 then
@@ -174,7 +191,7 @@ begin
   FGenerator.Calculate;
   FViewer.Points := FGenerator.Points;
   FViewer.Invalidate;
-  //UpdateFormulaHistory;
+  UpdateFormulaHistory;
 end;
 
 procedure TMainForm.cbBackgroundColorColorChanged(Sender: TObject);
@@ -253,6 +270,8 @@ procedure TMainForm.FormCreate(Sender: TObject);
 var
   i: Integer;
 begin
+  Caption := APP_NAME;
+
   FRecentFilesManager := TMRUMenuManager.Create(self);
   FRecentFilesManager.MenuCaptionMask := '%0:x - %s';
 //  FRecentFilesManager.MenuItem := mnuRecentlyOpened;
@@ -434,7 +453,7 @@ begin
     edFormulaY.Text := '(sin(a*t) + sin(c*t)) / 2';
     edFormulaZ.Text := 'sin(d*t)';
   end;
-  if rbFormula2.Checked then
+  if rbFormula3.Checked then
   begin
     edFormulaX.Text := 'sin(a*t) * (1 + cos(b*t)) / 2';
     edFormulaY.Text := 'sin(a*t) * (1 + sin(c*t)) / 2';
@@ -476,8 +495,6 @@ begin
     Application.ProcessMessages;
     WindowState := TWindowState(ini.ReadInteger('Position', 'WindowState', 0));
 
-    LoadLissParams(ini);
-
     edFormulaX.Items.Clear;
     edFormulaY.Items.Clear;
     edFormulaZ.Items.Clear;
@@ -499,6 +516,8 @@ begin
     finally
       List.Free;
     end;
+
+    LoadLissParams(ini);
   finally
     ini.Free;
   end;
@@ -593,6 +612,7 @@ begin
   Calculate;
 
   FRecentFilesManager.AddToRecent(AFileName);
+  Caption := APP_NAME + ' - ' + AFileName;
 end;
 
 procedure TMainForm.tbSaveAsBitmapClick(Sender: TObject);
@@ -656,8 +676,30 @@ begin
         ini.Free;
       end;
      {$ENDIF}
+      FRecentFilesManager.AddToRecent(FileName);
     end;
   end;
+end;
+
+procedure TMainForm.tbResetClick(Sender: TObject);
+begin
+  rbFormula1.Checked := true;
+  seCoeffA.Value := 0.0;
+  seCoeffB.Value := 0.0;
+  seCoeffC.Value := 0.0;
+  seCoeffD.value := 0.0;
+  seStepCount.Value := 0;
+  seStepSize.Value := 1.0;
+  cbSymbolColor.ButtonColor := SYMBOL_COLOR;
+  cbBackgroundColor.ButtonColor := clBlack;
+  cbViewDirection.ItemIndex := 1;
+  cbShowAxes.Checked := false;
+  cbTeleLens.Checked := false;
+  FViewer.CameraDistance := CAMERA_DISTANCE;
+  FViewer.CameraAngle := VIEW_ANGLE;
+  FViewer.CameraRotX := 0;
+  FViewer.CameraRotY := 0;
+  FViewer.CameraRotZ := 0;
 end;
 
 function TMainForm.UnpackParams(AData: TLissFileRec): Boolean;
@@ -689,6 +731,7 @@ begin
     3: rbFormula3.Checked := true;
     else rbFormula1.Checked := true;
   end;
+  rbFormulaChange(nil);
 
   penNr := AData[6];
 
@@ -741,10 +784,12 @@ procedure TMainForm.UpdateFormulaHistory;
   var
     s: String;
     idx: Integer;
+    itemIdx: Integer;
   begin
     s := ACombobox.Text;
     if s = '' then
       exit;
+    itemIdx := ACombobox.ItemIndex;
     idx := ACombobox.Items.IndexOf(s);
     if idx = -1 then
     begin
@@ -753,6 +798,7 @@ procedure TMainForm.UpdateFormulaHistory;
         ACombobox.Items.Delete(ACombobox.Items.Count-1);
     end else
       AComboBox.Items.Move(idx, 0);
+    Acombobox.ItemIndex := itemIdx;
   end;
 
 begin
@@ -810,14 +856,14 @@ begin
     ini.WriteInteger('MainForm', 'Height', RestoredHeight);
     ini.WriteInteger('MainForm', 'WindowState', Integer(WindowState));
 
-    SaveLissParams(ini);
-
     for i:=0 to edFormulaX.Items.Count-1 do
       ini.WriteString('FormulaHistory', 'x' + IntToStr(i), edFormulaX.Items[i]);
     for i:=0 to edFormulaY.Items.Count-1 do
       ini.WriteString('FormulaHistory', 'y' + IntToStr(i), edFormulaY.Items[i]);
     for i:=0 to edFormulaZ.Items.Count-1 do
       ini.WriteString('FormulaHistory', 'z' + IntToStr(i), edFormulaZ.Items[i]);
+
+    SaveLissParams(ini);
   finally
     ini.Free;
   end;
