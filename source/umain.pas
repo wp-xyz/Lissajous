@@ -334,59 +334,39 @@ begin
 end;
 
 procedure TMainForm.cbViewDirectionChange(Sender: TObject);
+const
+  ROTATIONS: array[0..18, 0..2] of double = (
+    (  0,   0,   0),      // mouse
+
+    (  0,   0,   0),      // xy plane (x right, y up)
+    (  0, 180,   0),      // xy plane (x left, y up)
+
+    (-90,   0, -90),      // yz plane (y right, z up)
+    (-90,   0,  90),      // yz plane (y left, z up)
+
+    (-90,   0,   0),      // xz plane (x right, z up)
+    (-90,   0, 180),      // xz plane (x left, z up)
+
+    ( 45,  45,  90),      // diagonal 1 (x up)
+    ( 45, 135,  90),      // diagonal 2 (x up)
+    ( 45, 225,  90),      // diagonal 3 (x up)
+    ( 45, 315,  90),      // diagonal 4 (x up)
+
+    ( 45, -45,   0),      // diagonal 5 (y up)
+    ( 45,  45,   0),      // diagonal 6 (y up)
+    ( 45, 135,   0),      // diagonal 7 (y up)
+    ( 45, 225,   0),      // diagonal 8 (y up)
+
+    (-45,   0, 225),      // diagonal 9 (z up)
+    (-45,   0, -45),      // diagonal 10 (z up)
+    (-45,   0,  45),      // diagonal 11 (z up)
+    (-45,   0, 135)       // diagonal 12 (z up)
+  );
+
 begin
-  case cbViewDirection.ItemIndex of
-    1: begin    // xy plane
-         FViewer.CameraRotX := 0;
-         FViewer.CameraRotY := 0;
-         FViewer.CameraRotZ := 0;
-       end;
-    2: begin    // xy plane (opposite)
-         FViewer.CameraRotX := 180;
-         FViewer.CameraRotY := 0;
-         FViewer.CameraRotZ := 0;
-       end;
-    3: begin    // yz plane
-         FViewer.CameraRotX := -90;
-         FViewer.CameraRotY := 0;
-         FViewer.CameraRotZ := -90;
-       end;
-    4: begin    // yz plane (opposite)
-         FViewer.CameraRotX := -90;
-         FViewer.CameraRotY := 0;
-         FViewer.CameraRotZ := 90;
-       end;
-    5: begin    // xz plane
-         FViewer.CameraRotX := -90;
-         FViewer.CameraRotY := 0;
-         FViewer.CameraRotZ := 0;
-       end;
-    6: begin    // xz plane (opposite)
-         FViewer.CameraRotX := -90;
-         FViewer.CameraRotY := 0;
-         FViewer.CameraRotZ := 180;
-       end;
-    7: begin    // diagonal 1
-         FViewer.CameraRotX := 45;
-         FViewer.CameraRotY := -45;
-         FViewer.CameraRotZ := 0;
-       end;
-    8: begin    // diagonal 2
-        FViewer.CameraRotX := 45;
-        FViewer.CameraRotY := 45;
-        FViewer.CameraRotZ := 0;
-      end;
-    9: begin    // diagonal 3
-        FViewer.CameraRotX := -45;
-        FViewer.CameraRotY := 0;
-        FViewer.CameraRotZ := 45;
-      end;
-  10: begin    // diagonal 4
-        FViewer.CameraRotX := 45;
-        FViewer.CameraRotY := 0;
-        FViewer.CameraRotZ := 45;
-      end;
-  end;
+  FViewer.CameraRotX := ROTATIONS[cbViewDirection.ItemIndex, 0];
+  FViewer.CameraRotY := ROTATIONS[cbViewDirection.ItemIndex, 1];
+  FViewer.CameraRotZ := ROTATIONS[cbViewDirection.ItemIndex, 2];
   FViewer.InvalidateView;
 end;
 

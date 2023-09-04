@@ -457,23 +457,29 @@ object MainForm: TMainForm
         Width = 184
         DropDownCount = 24
         ItemHeight = 15
-        ItemIndex = 1
         Items.Strings = (
           '(mouse)'
-          'xy plane'
-          'xy plane (opposite)'
-          'yz plane'
-          'yz plane (opposite)'
-          'xz plane'
-          'xz plane (opposite)'
-          'diagonal 1'
-          'diagonal 2'
-          'diagonal 3'
-          'diagonal 4'
+          'xy plane (x right, y up)'
+          'xy plane (x left, y up)'
+          'yz plane (y right, z up)'
+          'yz plane (y left, z up)'
+          'xz plane (x right, z up)'
+          'xz plane (x left, z up)'
+          'diagonal 1 (x up)'
+          'diagonal 2 (x up)'
+          'diagonal 3 (x up)'
+          'diagonal 4 (x up)'
+          'diagonal 5 (y up)'
+          'diagonal 6 (y up)'
+          'diagonal 7 (y up)'
+          'diagonal 8 (y up)'
+          'diagonal 9 (z up)'
+          'diagonal 10 (z up)'
+          'diagonal 11 (z up)'
+          'diagonal 12 (z up)'
         )
         Style = csDropDownList
         TabOrder = 0
-        Text = 'xy plane'
         OnChange = cbViewDirectionChange
       end
       object cbBackgroundColor: TColorButton
