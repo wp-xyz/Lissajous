@@ -531,7 +531,6 @@ begin
 
   FViewer.SymbolSize := ini.ReadFloat(section, 'SymbolSize', FViewer.SymbolSize);
   FViewer.CameraDistance := ini.ReadFloat(section, 'CameraDistance', FViewer.CameraDistance);
-//  FViewer.CameraAngle := ini.ReadFloat(section, 'CameraAngle', FViewer.CameraAngle);
   FViewer.CameraRotX := ini.ReadFloat(section, 'RotationX', FViewer.CameraRotX);
   FViewer.CameraRotY := ini.ReadFloat(section, 'RotationY', FViewer.CameraRotY);
   FViewer.CameraRotZ := ini.ReadFloat(section, 'RotationZ', FViewer.CameraRotZ);
@@ -680,7 +679,6 @@ begin
   ini.WriteBool(section, 'ShowAxes', cbShowAxes.Checked);
   ini.WriteString(section, 'Projection', GetEnumName(TypeInfo(TProjection), cbViewAngle.ItemIndex));
   ini.WriteFloat(section, 'SymbolSize', FViewer.SymbolSize);
-  ini.WriteFloat(section, 'CameraAngle', FViewer.CameraAngle);
   ini.WriteFloat(section, 'CameraDistance', FViewer.CameraDistance);
   ini.WriteFloat(section, 'RotationX', FViewer.CameraRotX);
   ini.WriteFloat(section, 'RotationY', FViewer.CameraRotY);
