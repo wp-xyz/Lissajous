@@ -1,10 +1,10 @@
 object MainForm: TMainForm
   Left = 314
-  Height = 674
+  Height = 677
   Top = 130
   Width = 775
   Caption = 'Lissajous Curve Generator'
-  ClientHeight = 674
+  ClientHeight = 677
   ClientWidth = 775
   ShowHint = True
   LCLVersion = '3.99.0.0'
@@ -12,15 +12,15 @@ object MainForm: TMainForm
   OnCloseQuery = FormCloseQuery
   OnCreate = FormCreate
   OnDestroy = FormDestroy
-  object Panel1: TPanel
+  object ParamsPanel: TPanel
     Left = 550
-    Height = 628
+    Height = 631
     Top = 46
     Width = 213
     Align = alRight
     BorderSpacing.Right = 12
     BevelOuter = bvNone
-    ClientHeight = 628
+    ClientHeight = 631
     ClientWidth = 213
     TabOrder = 3
     object GroupBox1: TGroupBox
@@ -128,12 +128,12 @@ object MainForm: TMainForm
     object GroupBox2: TGroupBox
       Left = 4
       Height = 186
-      Top = 133
+      Top = 129
       Width = 209
       Align = alTop
       AutoSize = True
       BorderSpacing.Left = 4
-      BorderSpacing.Top = 16
+      BorderSpacing.Top = 12
       Caption = 'Coefficients'
       ClientHeight = 166
       ClientWidth = 205
@@ -274,7 +274,7 @@ object MainForm: TMainForm
         AnchorSideLeft.Side = asrBottom
         AnchorSideTop.Control = seCoeffD
         AnchorSideTop.Side = asrBottom
-        AnchorSideRight.Control = lblDegrees
+        AnchorSideRight.Control = lblStepDegrees
         Left = 73
         Height = 23
         Top = 108
@@ -318,7 +318,7 @@ object MainForm: TMainForm
         Value = 1
         OnChange = UpdateLissajousHandler
       end
-      object lblDegrees: TLabel
+      object lblStepDegrees: TLabel
         AnchorSideLeft.Side = asrBottom
         AnchorSideTop.Control = seStepSize
         AnchorSideTop.Side = asrCenter
@@ -336,15 +336,15 @@ object MainForm: TMainForm
     end
     object GroupBox3: TGroupBox
       Left = 4
-      Height = 248
-      Top = 335
+      Height = 292
+      Top = 327
       Width = 209
       Align = alTop
       AutoSize = True
       BorderSpacing.Left = 4
-      BorderSpacing.Top = 16
+      BorderSpacing.Top = 12
       Caption = 'Rendering'
-      ClientHeight = 228
+      ClientHeight = 272
       ClientWidth = 205
       TabOrder = 2
       object cbSymbolColor: TColorButton
@@ -370,13 +370,14 @@ object MainForm: TMainForm
       end
       object cbShowAxes: TCheckBox
         AnchorSideLeft.Control = lblViewDirection
-        AnchorSideTop.Control = cbViewDirection
+        AnchorSideTop.Control = seZRotation
         AnchorSideTop.Side = asrBottom
         Left = 12
         Height = 19
-        Top = 137
+        Top = 245
         Width = 80
         BorderSpacing.Top = 4
+        BorderSpacing.Bottom = 8
         Caption = 'Show axes ('
         TabOrder = 6
         OnChange = cbShowAxesChange
@@ -388,7 +389,7 @@ object MainForm: TMainForm
         AnchorSideTop.Side = asrCenter
         Left = 92
         Height = 15
-        Top = 139
+        Top = 247
         Width = 6
         Caption = 'x'
         Font.Color = clRed
@@ -402,7 +403,7 @@ object MainForm: TMainForm
         AnchorSideTop.Side = asrCenter
         Left = 102
         Height = 15
-        Top = 139
+        Top = 247
         Width = 6
         BorderSpacing.Left = 4
         Caption = 'y'
@@ -417,7 +418,7 @@ object MainForm: TMainForm
         AnchorSideTop.Side = asrCenter
         Left = 112
         Height = 15
-        Top = 139
+        Top = 247
         Width = 5
         BorderSpacing.Left = 4
         Caption = 'z'
@@ -432,7 +433,7 @@ object MainForm: TMainForm
         AnchorSideTop.Side = asrCenter
         Left = 117
         Height = 15
-        Top = 139
+        Top = 247
         Width = 4
         Caption = ')'
         ParentColor = False
@@ -499,18 +500,6 @@ object MainForm: TMainForm
         Margin = 4
         OnColorChanged = cbBackgroundColorColorChanged
       end
-      object Label1: TLabel
-        AnchorSideLeft.Control = lblViewDirection
-        AnchorSideTop.Control = cbShowAxes
-        AnchorSideTop.Side = asrBottom
-        Left = 12
-        Height = 60
-        Top = 160
-        Width = 94
-        BorderSpacing.Top = 4
-        BorderSpacing.Bottom = 8
-        Caption = 'Camera distance: '#13#10'x Rotation:'#13#10'y Rotation:'#13#10'z Rotation:'
-      end
       object cbViewAngle: TComboBox
         AnchorSideLeft.Control = cbViewDirection
         AnchorSideTop.Control = seStickDiam
@@ -542,11 +531,14 @@ object MainForm: TMainForm
         AnchorSideLeft.Control = GroupBox3
         AnchorSideTop.Control = cbViewAngle
         AnchorSideTop.Side = asrCenter
-        Left = 12
+        AnchorSideRight.Control = cbViewAngle
+        Left = 30
         Height = 15
         Top = 87
         Width = 57
+        Anchors = [akTop, akRight]
         BorderSpacing.Left = 12
+        BorderSpacing.Right = 8
         Caption = 'View angle'
       end
       object lblViewDirection: TLabel
@@ -667,11 +659,172 @@ object MainForm: TMainForm
         BorderSpacing.Right = 4
         Caption = 'D'
       end
+      object seCameraDistance: TFloatSpinEdit
+        AnchorSideLeft.Control = cbViewDirection
+        AnchorSideTop.Control = cbViewDirection
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = cbViewDirection
+        AnchorSideRight.Side = asrBottom
+        Left = 95
+        Height = 23
+        Top = 137
+        Width = 102
+        Alignment = taRightJustify
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Top = 4
+        Increment = 0.1
+        TabOrder = 7
+        OnChange = seCameraDistanceChange
+      end
+      object lblCameraDistance: TLabel
+        AnchorSideTop.Control = seCameraDistance
+        AnchorSideTop.Side = asrCenter
+        AnchorSideRight.Control = seCameraDistance
+        Left = 42
+        Height = 15
+        Top = 141
+        Width = 45
+        Anchors = [akTop, akRight]
+        BorderSpacing.Right = 8
+        Caption = 'Distance'
+      end
+      object lblXRotation: TLabel
+        AnchorSideTop.Control = seXRotation
+        AnchorSideTop.Side = asrCenter
+        AnchorSideRight.Control = seXRotation
+        Left = 35
+        Height = 15
+        Top = 168
+        Width = 52
+        Anchors = [akTop, akRight]
+        BorderSpacing.Right = 8
+        Caption = 'X rotation'
+      end
+      object seXRotation: TFloatSpinEdit
+        AnchorSideLeft.Control = cbViewDirection
+        AnchorSideTop.Control = seCameraDistance
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = lblXDegrees
+        Left = 95
+        Height = 23
+        Top = 164
+        Width = 57
+        Alignment = taRightJustify
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Top = 4
+        DecimalPlaces = 1
+        Increment = 0.1
+        TabOrder = 8
+        OnChange = seXRotationChange
+      end
+      object lblXDegrees: TLabel
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = seXRotation
+        AnchorSideTop.Side = asrCenter
+        AnchorSideRight.Control = GroupBox3
+        AnchorSideRight.Side = asrBottom
+        Left = 156
+        Height = 15
+        Top = 168
+        Width = 41
+        Anchors = [akTop, akRight]
+        BorderSpacing.Left = 4
+        BorderSpacing.Right = 8
+        Caption = 'degrees'
+      end
+      object lblYRotation: TLabel
+        AnchorSideTop.Control = seYRotation
+        AnchorSideTop.Side = asrCenter
+        AnchorSideRight.Control = seYRotation
+        Left = 35
+        Height = 15
+        Top = 195
+        Width = 52
+        Anchors = [akTop, akRight]
+        BorderSpacing.Right = 8
+        Caption = 'Y rotation'
+      end
+      object seYRotation: TFloatSpinEdit
+        AnchorSideLeft.Control = cbViewDirection
+        AnchorSideTop.Control = seXRotation
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = lblYDegrees
+        Left = 95
+        Height = 23
+        Top = 191
+        Width = 57
+        Alignment = taRightJustify
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Top = 4
+        DecimalPlaces = 1
+        Increment = 0.1
+        TabOrder = 9
+        OnChange = seYRotationChange
+      end
+      object lblYDegrees: TLabel
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = seYRotation
+        AnchorSideTop.Side = asrCenter
+        AnchorSideRight.Control = GroupBox3
+        AnchorSideRight.Side = asrBottom
+        Left = 156
+        Height = 15
+        Top = 195
+        Width = 41
+        Anchors = [akTop, akRight]
+        BorderSpacing.Left = 4
+        BorderSpacing.Right = 8
+        Caption = 'degrees'
+      end
+      object lblZRotation: TLabel
+        AnchorSideTop.Control = seZRotation
+        AnchorSideTop.Side = asrCenter
+        AnchorSideRight.Control = seZRotation
+        Left = 35
+        Height = 15
+        Top = 222
+        Width = 52
+        Anchors = [akTop, akRight]
+        BorderSpacing.Right = 8
+        Caption = 'Z rotation'
+      end
+      object seZRotation: TFloatSpinEdit
+        AnchorSideLeft.Control = cbViewDirection
+        AnchorSideTop.Control = seYRotation
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = lblZDegrees
+        Left = 95
+        Height = 23
+        Top = 218
+        Width = 57
+        Alignment = taRightJustify
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Top = 4
+        DecimalPlaces = 1
+        Increment = 0.1
+        TabOrder = 10
+        OnChange = seZRotationChange
+      end
+      object lblZDegrees: TLabel
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = seZRotation
+        AnchorSideTop.Side = asrCenter
+        AnchorSideRight.Control = GroupBox3
+        AnchorSideRight.Side = asrBottom
+        Left = 156
+        Height = 15
+        Top = 222
+        Width = 41
+        Anchors = [akTop, akRight]
+        BorderSpacing.Left = 4
+        BorderSpacing.Right = 8
+        Caption = 'degrees'
+      end
     end
   end
   object ParamPanel: TPanel
     Left = 0
-    Height = 628
+    Height = 631
     Top = 46
     Width = 545
     Align = alClient
@@ -747,7 +900,7 @@ object MainForm: TMainForm
   end
   object Splitter1: TSplitter
     Left = 545
-    Height = 628
+    Height = 631
     Top = 46
     Width = 5
     Align = alRight

@@ -37,12 +37,20 @@ type
     edFormulaY: TComboBox;
     edFormulaZ: TComboBox;
     acExit: TFileExit;
+    lblZDegrees: TLabel;
+    lblXRotation: TLabel;
+    lblYRotation: TLabel;
+    lblXDegrees: TLabel;
+    lblYDegrees: TLabel;
+    lblZRotation: TLabel;
+    seCameraDistance: TFloatSpinEdit;
+    lblCameraDistance: TLabel;
     lblStickDiam: TLabel;
     LblSymbolDiam: TLabel;
+    seXRotation: TFloatSpinEdit;
     seSymbolSize: TFloatSpinEdit;
     GroupBox3: TGroupBox;
     ImageList: TImageList;
-    Label1: TLabel;
     lblViewAngle: TLabel;
     lblViewDirection: TLabel;
     lblXEquals: TLabel;
@@ -52,7 +60,7 @@ type
     lblY: TLabel;
     lblZ: TLabel;
     lblClosingBracket: TLabel;
-    lblDegrees: TLabel;
+    lblStepDegrees: TLabel;
     lblCoeffA: TLabel;
     lblCoeffD: TLabel;
     lblCoeffC: TLabel;
@@ -65,7 +73,7 @@ type
     seCoeffA: TFloatSpinEdit;
     GroupBox1: TGroupBox;
     GroupBox2: TGroupBox;
-    Panel1: TPanel;
+    ParamsPanel: TPanel;
     ParamPanel: TPanel;
     seCoeffD: TFloatSpinEdit;
     seCoeffC: TFloatSpinEdit;
@@ -73,6 +81,8 @@ type
     seStepSize: TFloatSpinEdit;
     seStepCount: TSpinEdit;
     seStickDiam: TFloatSpinEdit;
+    seYRotation: TFloatSpinEdit;
+    seZRotation: TFloatSpinEdit;
     Splitter1: TSplitter;
     ToolBar: TToolBar;
     tbLoadParams: TToolButton;
@@ -103,8 +113,12 @@ type
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
+    procedure seCameraDistanceChange(Sender: TObject);
     procedure seStickDiamChange(Sender: TObject);
     procedure seSymbolSizeChange(Sender: TObject);
+    procedure seXRotationChange(Sender: TObject);
+    procedure seYRotationChange(Sender: TObject);
+    procedure seZRotationChange(Sender: TObject);
     procedure UpdateLissajousHandler(Sender: TObject);
   private
     FActivated: Boolean;
@@ -154,13 +168,9 @@ uses
 
 const
   APP_NAME = 'Lissajous Curve Generator';
-
   MAX_FORMULA_COUNT = 20;
-
-  CAMERA_ANGLE = 60.0; //45.0;
-  TELE_DISTANCE_FACTOR = 5.0;
-  TELE_ANGLE = 10.0;
-
+  MAX_MRU_FILE_COUNT = 20;
+  MAX_DROPDOWN_COUNT = 20;
   SIGNATURE = 'lissa';
 
   IncValues: array[1..13] of single = (
@@ -303,14 +313,12 @@ end;
 procedure TMainForm.ApplicationPropertiesIdle(Sender: TObject;
   var Done: Boolean);
 begin
-  Label1.Caption := Format(
-    'Camera distance: %.3f' + LineEnding +
-    'x rotation: %.0f°' + LineEnding +
-    'y rotation: %.0f°' + LineEnding +
-    'z rotation: %.0f°', [
-    FViewer.CameraDistance,
-    FViewer.CameraRotX, FViewer.CameraRotY, FViewer.CameraRotZ
-  ]);
+  inc(FViewerLock);
+  seCameraDistance.Value := FViewer.CameraDistance;
+  seXRotation.Value := FViewer.CameraRotX;
+  seYRotation.Value := FViewer.CameraRotY;
+  seZRotation.Value := FViewer.CameraRotZ;
+  dec(FViewerLock);
 end;
 
 procedure TMainForm.Calculate;
@@ -435,6 +443,7 @@ begin
   if not FActivated then
   begin
     FActivated := true;
+    Constraints.MinHeight := Toolbar.Height + ParamsPanel.Height;
     AutoSize := false;
     ReadFromIni;
     Calculate;
@@ -448,15 +457,12 @@ begin
 end;
 
 procedure TMainForm.FormCreate(Sender: TObject);
-var
-  i: Integer;
 begin
   Caption := APP_NAME;
 
   FRecentFilesManager := TMRUMenuManager.Create(self);
   FRecentFilesManager.MenuCaptionMask := '%0:d - %1:s';
-  FRecentFilesManager.MaxRecent := 24;
-//  FRecentFilesManager.MenuItem := mnuRecentlyOpened;
+  FRecentFilesManager.MaxRecent := MAX_MRU_FILE_COUNT;
   FRecentFilesManager.PopupMenu := RecentFilesPopup;
   FRecentFilesManager.OnRecentFile := @RecentFileHandler;
   FRecentFilesManager.IniFileName := GetIniFileName;
@@ -473,9 +479,11 @@ begin
   // Add built-in formulas
   AddBuiltinFormulas;
 
-  edFormulaX.DropDownCount := 24;
-  edFormulaY.DropDownCount := 24;
-  edFormulaZ.DropDownCount := 24;
+  edFormulaX.DropDownCount := MAX_DROPDOWN_COUNT;
+  edFormulaY.DropDownCount := MAX_DROPDOWN_COUNT;
+  edFormulaZ.DropDownCount := MAX_DROPDOWN_COUNT;
+  cbViewAngle.DropDownCount := MAX_DROPDOWN_COUNT;
+  cbViewDirection.DropDownCount := MAX_DROPDOWN_COUNT;
 end;
 
 procedure TMainForm.FormDestroy(Sender: TObject);
@@ -675,6 +683,14 @@ begin
   FFileName := AFileName;
 end;
 
+procedure TMainForm.seCameraDistanceChange(Sender: TObject);
+begin
+  if FViewerLock <> 0 then exit;
+  FViewer.CameraDistance := seCameraDistance.Value;
+  FViewer.InvalidateView;
+end;
+
+
 procedure TMainForm.seStickDiamChange(Sender: TObject);
 begin
   FViewer.StickDiameter := seStickDiam.Value;
@@ -683,6 +699,27 @@ end;
 procedure TMainForm.seSymbolSizeChange(Sender: TObject);
 begin
   FViewer.SymbolSize := seSymbolSize.Value;
+end;
+
+procedure TMainForm.seXRotationChange(Sender: TObject);
+begin
+  if FViewerLock <> 0 then exit;
+  FViewer.CameraRotX := seXRotation.Value;
+  FViewer.InvalidateView;
+end;
+
+procedure TMainForm.seYRotationChange(Sender: TObject);
+begin
+  if FViewerLock <> 0 then exit;
+  FViewer.CameraRotY := seYRotation.Value;
+  FViewer.InvalidateView;
+end;
+
+procedure TMainForm.seZRotationChange(Sender: TObject);
+begin
+  if FViewerLock <> 0 then exit;
+  FViewer.CameraRotZ := seZRotation.Value;
+  FViewer.InvalidateView;
 end;
 
 function TMainForm.UnpackParams(AData: TLissFileRec): Boolean;
@@ -728,14 +765,19 @@ begin
 
   penNr := AData[6];
 
-  // symbol color
+  // Symbol color
   pencolor := AData[7];
   if (penColor >= Low(ColorList)) and (penColor <= High(ColorList)) then
     cbSymbolColor.ButtonColor := ColorList[penColor]
   else
     cbSymbolColor.ButtonColor := penColor;
 
+  // "smooth", meaning: show connections between symbols
   smooth := (AData[8] = 1);
+  cbShowSticks.Checked := smooth;
+  seStickDiam.Value := seSymbolSize.Value;
+  cbStickColor.ButtonColor := cbSymbolColor.ButtonColor;
+
   grid := AData[9] = 1;
 
   // Step count

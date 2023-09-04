@@ -429,14 +429,12 @@ begin
 
   if not FInitDone then begin
     InitGL;
-  //  ToPerspective;
+    ToPerspective;
     FInitDone := true;
   end;
 
-  ToPerspective;
-
-  // clear buffer
-  glClearColor(               // background color
+  // Clear buffer (background color)
+  glClearColor(
     Red(FBackColor)/255,
     Green(FBackColor)/255,
     Blue(FBackColor)/255,
@@ -444,18 +442,20 @@ begin
   );
   glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT or GL_STENCIL_BUFFER_BIT);
 
-  // save the initial ModelView matrix before modifying ModelView matrix
+  // Save the initial ModelView matrix before modifying ModelView matrix
   glPushMatrix();
 
-  // transform modelview matrix
+  // Transform modelview matrix
   glTranslatef(0, 0, -FCameraDistance);
   glRotatef(FCameraRotX, 1, 0, 0);
   glRotatef(FCameraRotY, 0, 1, 0);
   glRotatef(FCameraRotZ, 0, 0, 1);
 
+  // Draw axes and scene using transformed ModelView matrix
   DrawAxes;
   DrawScene;
 
+  // Restore ModelView matrix
   glPopMatrix();
 
   OpenGLControl.SwapBuffers;
