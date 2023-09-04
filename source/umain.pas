@@ -27,9 +27,9 @@ type
     cbSymbolColor: TColorButton;
     cbShowAxes: TCheckBox;
     cbBackgroundColor: TColorButton;
-    cbTeleLens: TCheckBox;
     ColorButton1: TColorButton;
     cbViewDirection: TComboBox;
+    cbViewAngle: TComboBox;
     edFormulaX: TComboBox;
     edFormulaY: TComboBox;
     edFormulaZ: TComboBox;
@@ -37,6 +37,8 @@ type
     GroupBox3: TGroupBox;
     ImageList: TImageList;
     Label1: TLabel;
+    lblViewAngle: TLabel;
+    lblViewDirection: TLabel;
     lblXEquals: TLabel;
     lblYEquals: TLabel;
     lblZEquals: TLabel;
@@ -82,16 +84,15 @@ type
     procedure acSaveParamsExecute(Sender: TObject);
     procedure ApplicationPropertiesIdle(Sender: TObject; var Done: Boolean);
     procedure cbBackgroundColorColorChanged(Sender: TObject);
+    procedure cbViewAngleChange(Sender: TObject);
     procedure cbShowAxesChange(Sender: TObject);
     procedure cbSymbolColorColorChanged(Sender: TObject);
-    procedure cbTeleLensChange(Sender: TObject);
     procedure cbViewDirectionChange(Sender: TObject);
     procedure edFormulaDropDown(Sender: TObject);
     procedure FormActivate(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
-    procedure tbCalculateClick(Sender: TObject);
     procedure UpdateLissajousHandler(Sender: TObject);
   private
     FActivated: Boolean;
@@ -120,6 +121,7 @@ type
     procedure RecentFileHandler(Sender: TObject; const AFileName: String);
 
   private
+    FFileName: String;
     // Config
     function GetIniFileName: String;
     procedure ReadFromIni;
@@ -136,15 +138,15 @@ implementation
 {$R *.lfm}
 
 uses
-  Math; //, GraphType;
+  TypInfo, Math;
 
 const
   APP_NAME = 'Lissajous Curve Generator';
 
   MAX_FORMULA_COUNT = 20;
 
-  CAMERA_ANGLE = 45.0;
-  TELE_DISTANCE_FACTOR = 2.0;
+  CAMERA_ANGLE = 60.0; //45.0;
+  TELE_DISTANCE_FACTOR = 5.0;
   TELE_ANGLE = 10.0;
 
   SIGNATURE = 'lissa';
@@ -180,6 +182,8 @@ begin
   begin
     Filter := 'Lissajous 3D files|*.l3d';
     DefaultExt := '.l3d';
+    InitialDir := ExtractFileName(FFileName);
+    FileName := '';
     if Execute then
       LoadParamFile(FileName);
   end;
@@ -197,7 +201,6 @@ begin
   cbBackgroundColor.ButtonColor := clBlack;
   cbViewDirection.ItemIndex := 1;
   cbShowAxes.Checked := false;
-  cbTeleLens.Checked := false;
   FViewer.CameraDistance := CAMERA_DISTANCE;
   FViewer.CameraAngle := VIEW_ANGLE;
   FViewer.CameraRotX := 0;
@@ -206,6 +209,7 @@ begin
   FViewer.ShowAxes := cbShowAxes.Checked;
   FViewer.SymbolColor := cbSymbolColor.ButtonColor;
   FViewer.BackColor := cbBackgroundColor.ButtonColor;
+  FFileName := '';
 end;
 
 procedure TMainForm.acSaveImageExecute(Sender: TObject);
@@ -217,6 +221,7 @@ begin
   begin
     Filter := 'BMP files|*.bmp|PNG files|*.png|JPEG files|*.jpg;*.jpeg';
     FilterIndex := 2;
+    FileName := ChangefileExt(ExtractFilename(FFilename), '');
     if Execute then
     begin
       ext := ExtractFileExt(FileName);
@@ -245,12 +250,15 @@ begin
   begin
     Filter := 'Lissajous 3D files|*.l3d';
     DefaultExt := '.l3d';
+    FileName := ExtractFileName(FFileName);
+    InitialDir := ExtractFileDir(FFilename);
     if Execute then
     begin
       ini := TIniFile.Create(FileName);
       try
         SaveLissParams(ini);
         FRecentFilesManager.AddToRecent(FileName);
+        FFileName := FileName;
       finally
         ini.Free;
       end;
@@ -309,6 +317,23 @@ begin
   FViewer.BackColor := cbBackgroundColor.ButtonColor;
 end;
 
+procedure TMainForm.cbViewAngleChange(Sender: TObject);
+var
+  angle: Double;
+begin
+  if cbViewAngle.ItemIndex = -1 then
+    exit;
+  if cbViewAngle.ItemIndex = cbViewAngle.Items.Count - 1 then
+    FViewer.Projection := oglOrthographic
+  else
+  begin
+    FViewer.Projection := oglPerspective;
+    angle := StrToFloatDef(cbViewAngle.Items[cbViewAngle.ItemIndex].Split(' ')[0], 45);
+    FViewer.CameraAngle := angle;
+    FViewer.InvalidateView;
+  end;
+end;
+
 procedure TMainForm.cbShowAxesChange(Sender: TObject);
 begin
   FViewer.ShowAxes := cbShowAxes.Checked;
@@ -317,20 +342,6 @@ end;
 procedure TMainForm.cbSymbolColorColorChanged(Sender: TObject);
 begin
   FViewer.SymbolColor := cbSymbolColor.ButtonColor;
-end;
-
-procedure TMainForm.cbTeleLensChange(Sender: TObject);
-begin
-  if cbTeleLens.Checked then
-  begin
-    FViewer.CameraDistance := FViewer.CameraDistance * TELE_DISTANCE_FACTOR;
-    FViewer.CameraAngle := TELE_ANGLE;
-  end else
-  begin
-    FViewer.CameraDistance := FViewer.CameraDistance / TELE_DISTANCE_FACTOR;
-    FViewer.CameraAngle := CAMERA_ANGLE;
-  end;
-  FViewer.InvalidateView;
 end;
 
 procedure TMainForm.cbViewDirectionChange(Sender: TObject);
@@ -513,13 +524,14 @@ begin
   section := 'Rendering';
   cbBackgroundColor.ButtonColor := ini.ReadInteger(section, 'BackgroundColor', clBlack);
   cbSymbolColor.ButtonColor := ini.ReadInteger(section, 'SymbolColor', clRed);
-  cbViewDirection.ItemIndex := ini.ReadInteger(section, 'ViewPlane', 0);
+  cbViewAngle.ItemIndex := ini.ReadInteger(section, 'ViewAngle', cbViewAngle.ItemIndex);
+  cbViewAngleChange(nil);
+  cbViewDirection.ItemIndex := ini.ReadInteger(section, 'ViewDirection', 0);
   cbShowAxes.Checked := ini.ReadBool(section, 'ShowAxes', false);
-  cbTeleLens.Checked := ini.ReadBool(section, 'TeleLens', false);
 
   FViewer.SymbolSize := ini.ReadFloat(section, 'SymbolSize', FViewer.SymbolSize);
-  FViewer.CameraAngle := ini.ReadFloat(section, 'CameraAngle', FViewer.CameraAngle);
   FViewer.CameraDistance := ini.ReadFloat(section, 'CameraDistance', FViewer.CameraDistance);
+//  FViewer.CameraAngle := ini.ReadFloat(section, 'CameraAngle', FViewer.CameraAngle);
   FViewer.CameraRotX := ini.ReadFloat(section, 'RotationX', FViewer.CameraRotX);
   FViewer.CameraRotY := ini.ReadFloat(section, 'RotationY', FViewer.CameraRotY);
   FViewer.CameraRotZ := ini.ReadFloat(section, 'RotationZ', FViewer.CameraRotZ);
@@ -568,11 +580,6 @@ begin
   x := seCoeffD.Value;  AData[15] := PDWord(@x)^;
 end;
 *)
-
-procedure TMainForm.tbCalculateClick(Sender: TObject);
-begin
-  Calculate;
-end;
 
 procedure TMainForm.ReadFromIni;
 var
@@ -668,9 +675,10 @@ begin
   section := 'Rendering';
   ini.WriteInteger(section, 'BackgroundColor', cbBackgroundColor.ButtonColor);
   ini.WriteInteger(section, 'SymbolColor', cbSymbolColor.ButtonColor);
-  ini.WriteInteger(section, 'ViewPlane', cbViewDirection.ItemIndex);
+  ini.WriteInteger(section, 'ViewDirection', cbViewDirection.ItemIndex);
+  ini.WriteInteger(section, 'ViewAngle', cbViewAngle.ItemIndex);
   ini.WriteBool(section, 'ShowAxes', cbShowAxes.Checked);
-  ini.WriteBool(section, 'TeleLens', cbTeleLens.Checked);
+  ini.WriteString(section, 'Projection', GetEnumName(TypeInfo(TProjection), cbViewAngle.ItemIndex));
   ini.WriteFloat(section, 'SymbolSize', FViewer.SymbolSize);
   ini.WriteFloat(section, 'CameraAngle', FViewer.CameraAngle);
   ini.WriteFloat(section, 'CameraDistance', FViewer.CameraDistance);
@@ -707,6 +715,8 @@ begin
 
   FRecentFilesManager.AddToRecent(AFileName);
   Caption := APP_NAME + ' - ' + AFileName;
+
+  FFileName := AFileName;
 end;
 
 function TMainForm.UnpackParams(AData: TLissFileRec): Boolean;

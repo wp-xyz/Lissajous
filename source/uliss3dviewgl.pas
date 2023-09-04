@@ -5,7 +5,7 @@ unit uLiss3dViewGL;
 interface
 
 uses
-  Classes, SysUtils, Types, Graphics, Forms, Controls,
+  Classes, SysUtils, Types, Math, Graphics, Forms, Controls,
   gl, glu, OpenGLContext,
   uLiss3dTypes;
 
@@ -23,6 +23,8 @@ type
   ToglVector2f = array[0..1] of GLFloat;
   ToglVector3f = array[0..2] of GLFloat;
   ToglVector4f = array[0..3] of GLFloat;
+
+  TProjection = (oglPerspective, oglOrthographic);
 
   { TViewerFrame }
 
@@ -47,8 +49,10 @@ type
     FSphere: PGLUQuadric;
     FSymbolColor: TColor;
     FSymbolSize: Double;
+    FProjection: TProjection;
     procedure SetBackColor(AValue: TColor);
     procedure SetPoints(const AValue: TPoint3dArray);
+    procedure SetProjection(AValue: TProjection);
     procedure SetShowAxes(AValue: Boolean);
     procedure SetSymbolColor(AValue: TColor);
 
@@ -73,6 +77,7 @@ type
     property CameraRotY: Double read FCameraRotY write FCameraRotY;
     property CameraRotZ: Double read FCameraRotZ write FCameraRotZ;
     property Points: TPoint3dArray read FPoints write SetPoints;
+    property Projection: TProjection read FProjection write SetProjection;
     property ShowAxes: Boolean read FShowAxes write SetShowAxes;
     property SymbolColor: TColor read FSymbolColor write SetSymbolColor;
     property SymbolSize: Double read FSymbolSize write FSymbolSize;
@@ -317,20 +322,23 @@ begin
 
   if not FInitDone then begin
     InitGL;
-    ToPerspective;
+  //  ToPerspective;
     FInitDone := true;
   end;
+
+  ToPerspective;
 
   // clear buffer
   glClearColor(               // background color
     Red(FBackColor)/255,
     Green(FBackColor)/255,
     Blue(FBackColor)/255,
-    1);
+    1.0
+  );
   glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT or GL_STENCIL_BUFFER_BIT);
 
   // save the initial ModelView matrix before modifying ModelView matrix
-  glPushMatrix();
+  //glPushMatrix();
 
   // transform modelview matrix
   glTranslatef(0, 0, -FCameraDistance);
@@ -341,7 +349,7 @@ begin
   DrawAxes;
   DrawScene;
 
-  glPopMatrix();
+  //glPopMatrix();
 
   OpenGLControl.SwapBuffers;
 end;
@@ -364,6 +372,14 @@ procedure TLiss3dViewerFrame.SetPoints(const AValue: TPoint3dArray);
 begin
   SetLength(FPoints, Length(AValue));
   Move(AValue[0], FPoints[0], Length(AValue) * Sizeof(TPoint3d));
+end;
+
+procedure TLiss3dViewerFrame.SetProjection(AValue: TProjection);
+begin
+  if AValue = FProjection then
+    exit;
+  FProjection := AValue;
+  InvalidateView;
 end;
 
 procedure TLiss3dViewerFrame.SetShowAxes(AValue: Boolean);
@@ -392,6 +408,8 @@ end;
 procedure TLiss3dViewerFrame.ToPerspective;
 var
   aspect: GLFloat;
+  x1, x2, y1, y2: Double;
+
 begin
   // Set viewport to be the entire window of the OpenGLControl
   glViewport(0, 0, OpenGLControl.Width, OpenGLControl.Height);
@@ -400,7 +418,21 @@ begin
   glMatrixMode(GL_PROJECTION);
   glLoadIdentity();
   aspect := OpenGLControl.Width / OpenGLControl.Height;
-  gluPerspective(VIEW_ANGLE, aspect, NEAR_CLIPDIST, FAR_CLIPDIST);
+  case FProjection of
+    oglPerspective:
+      begin
+        //FCameraDistance := FCameraDistance * tan(DegToRad(VIEW_ANGLE)) / tan(DegToRad(FCameraAngle));
+        gluPerspective(FCameraAngle, aspect, NEAR_CLIPDIST, FAR_CLIPDIST);
+      end;
+    oglOrthographic:
+      begin
+        x2 := 2.0 * FCameraDistance/CAMERA_DISTANCE;
+        x1 := - x2;
+        y1 := x1 / aspect;
+        y2 := x2 / aspect;
+        glOrtho(x1, x2, y1, y2, NEAR_CLIPDIST, FAR_CLIPDIST);
+      end;
+  end;
 
   // Switch to modelview matrix in order to set scene
   glMatrixMode(GL_MODELVIEW);

@@ -1,10 +1,10 @@
 object MainForm: TMainForm
   Left = 314
-  Height = 599
+  Height = 650
   Top = 130
   Width = 765
   Caption = 'Lissajous Curve Generator'
-  ClientHeight = 599
+  ClientHeight = 650
   ClientWidth = 765
   ShowHint = True
   LCLVersion = '3.99.0.0'
@@ -14,13 +14,13 @@ object MainForm: TMainForm
   OnDestroy = FormDestroy
   object Panel1: TPanel
     Left = 540
-    Height = 553
+    Height = 604
     Top = 46
     Width = 213
     Align = alRight
     BorderSpacing.Right = 12
     BevelOuter = bvNone
-    ClientHeight = 553
+    ClientHeight = 604
     ClientWidth = 213
     TabOrder = 2
     object GroupBox1: TGroupBox
@@ -336,7 +336,7 @@ object MainForm: TMainForm
     end
     object GroupBox3: TGroupBox
       Left = 4
-      Height = 190
+      Height = 194
       Top = 355
       Width = 209
       Align = alTop
@@ -344,7 +344,7 @@ object MainForm: TMainForm
       BorderSpacing.Left = 4
       BorderSpacing.Top = 16
       Caption = 'Rendering'
-      ClientHeight = 170
+      ClientHeight = 174
       ClientWidth = 205
       TabOrder = 2
       object cbSymbolColor: TColorButton
@@ -370,7 +370,7 @@ object MainForm: TMainForm
         AnchorSideTop.Side = asrBottom
         Left = 8
         Height = 19
-        Top = 56
+        Top = 83
         Width = 80
         BorderSpacing.Top = 4
         Caption = 'Show axes ('
@@ -384,7 +384,7 @@ object MainForm: TMainForm
         AnchorSideTop.Side = asrCenter
         Left = 88
         Height = 15
-        Top = 58
+        Top = 85
         Width = 6
         Caption = 'x'
         Font.Color = clRed
@@ -398,7 +398,7 @@ object MainForm: TMainForm
         AnchorSideTop.Side = asrCenter
         Left = 98
         Height = 15
-        Top = 58
+        Top = 85
         Width = 6
         BorderSpacing.Left = 4
         Caption = 'y'
@@ -413,7 +413,7 @@ object MainForm: TMainForm
         AnchorSideTop.Side = asrCenter
         Left = 108
         Height = 15
-        Top = 58
+        Top = 85
         Width = 5
         BorderSpacing.Left = 4
         Caption = 'z'
@@ -428,33 +428,25 @@ object MainForm: TMainForm
         AnchorSideTop.Side = asrCenter
         Left = 113
         Height = 15
-        Top = 58
+        Top = 85
         Width = 4
         Caption = ')'
         ParentColor = False
         ParentFont = False
       end
-      object cbTeleLens: TCheckBox
-        AnchorSideLeft.Control = cbShowAxes
-        AnchorSideTop.Control = cbShowAxes
-        AnchorSideTop.Side = asrBottom
-        Left = 8
-        Height = 19
-        Top = 75
-        Width = 63
-        BorderSpacing.Bottom = 8
-        Caption = 'Tele lens'
-        TabOrder = 2
-        OnChange = cbTeleLensChange
-      end
       object cbViewDirection: TComboBox
-        AnchorSideLeft.Control = cbSymbolColor
-        AnchorSideTop.Control = cbSymbolColor
+        AnchorSideLeft.Control = cbViewAngle
+        AnchorSideTop.Control = cbViewAngle
         AnchorSideTop.Side = asrBottom
-        Left = 8
+        AnchorSideRight.Control = GroupBox3
+        AnchorSideRight.Side = asrBottom
+        Left = 76
         Height = 23
-        Top = 29
-        Width = 184
+        Top = 56
+        Width = 121
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Top = 4
+        BorderSpacing.Right = 8
         DropDownCount = 24
         ItemHeight = 15
         Items.Strings = (
@@ -501,21 +493,70 @@ object MainForm: TMainForm
         OnColorChanged = cbBackgroundColorColorChanged
       end
       object Label1: TLabel
-        AnchorSideLeft.Control = cbTeleLens
-        AnchorSideTop.Control = cbTeleLens
+        AnchorSideLeft.Control = cbSymbolColor
+        AnchorSideTop.Control = cbShowAxes
         AnchorSideTop.Side = asrBottom
         Left = 8
         Height = 60
-        Top = 102
+        Top = 106
         Width = 94
+        BorderSpacing.Top = 4
         BorderSpacing.Bottom = 8
         Caption = 'Camera distance: '#13#10'x Rotation:'#13#10'y Rotation:'#13#10'z Rotation:'
+      end
+      object cbViewAngle: TComboBox
+        AnchorSideLeft.Control = lblViewAngle
+        AnchorSideLeft.Side = asrBottom
+        AnchorSideTop.Control = cbSymbolColor
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = GroupBox3
+        AnchorSideRight.Side = asrBottom
+        Left = 76
+        Height = 23
+        Top = 29
+        Width = 121
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Left = 8
+        BorderSpacing.Right = 8
+        ItemHeight = 15
+        ItemIndex = 1
+        Items.Strings = (
+          '60 degrees'
+          '45 degrees'
+          '30 degrees'
+          '10 degrees'
+          'parallel projection'
+        )
+        Style = csDropDownList
+        TabOrder = 2
+        Text = '45 degrees'
+        OnChange = cbViewAngleChange
+      end
+      object lblViewAngle: TLabel
+        AnchorSideLeft.Control = cbSymbolColor
+        AnchorSideTop.Control = cbViewAngle
+        AnchorSideTop.Side = asrCenter
+        Left = 8
+        Height = 15
+        Top = 33
+        Width = 60
+        Caption = 'View angle:'
+      end
+      object lblViewDirection: TLabel
+        AnchorSideLeft.Control = cbSymbolColor
+        AnchorSideTop.Control = cbViewDirection
+        AnchorSideTop.Side = asrCenter
+        Left = 8
+        Height = 15
+        Top = 60
+        Width = 48
+        Caption = 'View dir.:'
       end
     end
   end
   object ParamPanel: TPanel
     Left = 0
-    Height = 553
+    Height = 604
     Top = 46
     Width = 535
     Align = alClient
@@ -580,7 +621,6 @@ object MainForm: TMainForm
       Left = 319
       Top = 0
       Action = acCalculate
-      OnClick = tbCalculateClick
     end
     object ToolButton3: TToolButton
       Left = 314
@@ -592,7 +632,7 @@ object MainForm: TMainForm
   end
   object Splitter1: TSplitter
     Left = 535
-    Height = 553
+    Height = 604
     Top = 46
     Width = 5
     Align = alRight

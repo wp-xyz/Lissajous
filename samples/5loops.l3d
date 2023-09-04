@@ -1,5 +1,5 @@
 [Formula]
-x=sin(a*t)
+x=cos(a*t)
 y=sin(b*t)
 z=sin(c*t)
 a=-12.5
@@ -12,12 +12,13 @@ StepSize=0.5
 [Rendering]
 BackgroundColor=0
 SymbolColor=65280
-ViewPlane=0
+ViewDirection=0
 ShowAxes=0
-TeleLens=0
 SymbolSize=0.05
 CameraAngle=45
-CameraDistance=3.23071537426773
-RotationX=-11
-RotationY=678
-RotationZ=88
+CameraDistance=4.67256992497503
+RotationX=0
+RotationY=-136
+RotationZ=-90
+Projection=
+ViewAngle=7

@@ -12,12 +12,12 @@ StepSize=1
 [Rendering]
 BackgroundColor=9546
 SymbolColor=7982587
-ViewPlane=0
+ViewDirection=0
 ShowAxes=0
-TeleLens=0
 SymbolSize=0.05
-CameraAngle=45
-CameraDistance=4.77514081019152
+CameraAngle=10
+CameraDistance=4.70129785637636
 RotationX=-62
 RotationY=0
 RotationZ=-184
+Projection=oglPerspective
