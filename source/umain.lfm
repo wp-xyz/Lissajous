@@ -1,11 +1,11 @@
 object MainForm: TMainForm
   Left = 314
-  Height = 650
+  Height = 674
   Top = 130
-  Width = 765
+  Width = 775
   Caption = 'Lissajous Curve Generator'
-  ClientHeight = 650
-  ClientWidth = 765
+  ClientHeight = 674
+  ClientWidth = 775
   ShowHint = True
   LCLVersion = '3.99.0.0'
   OnActivate = FormActivate
@@ -13,16 +13,16 @@ object MainForm: TMainForm
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   object Panel1: TPanel
-    Left = 540
-    Height = 604
+    Left = 550
+    Height = 628
     Top = 46
     Width = 213
     Align = alRight
     BorderSpacing.Right = 12
     BevelOuter = bvNone
-    ClientHeight = 604
+    ClientHeight = 628
     ClientWidth = 213
-    TabOrder = 2
+    TabOrder = 3
     object GroupBox1: TGroupBox
       Left = 4
       Height = 113
@@ -127,7 +127,7 @@ object MainForm: TMainForm
     end
     object GroupBox2: TGroupBox
       Left = 4
-      Height = 206
+      Height = 186
       Top = 133
       Width = 209
       Align = alTop
@@ -135,7 +135,7 @@ object MainForm: TMainForm
       BorderSpacing.Left = 4
       BorderSpacing.Top = 16
       Caption = 'Coefficients'
-      ClientHeight = 186
+      ClientHeight = 166
       ClientWidth = 205
       TabOrder = 1
       object seCoeffA: TFloatSpinEdit
@@ -173,7 +173,7 @@ object MainForm: TMainForm
         AnchorSideRight.Control = seCoeffB
         Left = 58
         Height = 15
-        Top = 35
+        Top = 31
         Width = 7
         Anchors = [akTop, akRight]
         BorderSpacing.Right = 8
@@ -187,11 +187,11 @@ object MainForm: TMainForm
         AnchorSideRight.Side = asrBottom
         Left = 73
         Height = 23
-        Top = 31
+        Top = 27
         Width = 79
         Alignment = taRightJustify
         Anchors = [akTop, akLeft, akRight]
-        BorderSpacing.Top = 8
+        BorderSpacing.Top = 4
         DecimalPlaces = 3
         Increment = 0.1
         TabOrder = 1
@@ -203,7 +203,7 @@ object MainForm: TMainForm
         AnchorSideRight.Control = seCoeffC
         Left = 59
         Height = 15
-        Top = 66
+        Top = 58
         Width = 6
         Anchors = [akTop, akRight]
         BorderSpacing.Right = 8
@@ -217,11 +217,11 @@ object MainForm: TMainForm
         AnchorSideRight.Side = asrBottom
         Left = 73
         Height = 23
-        Top = 62
+        Top = 54
         Width = 79
         Alignment = taRightJustify
         Anchors = [akTop, akLeft, akRight]
-        BorderSpacing.Top = 8
+        BorderSpacing.Top = 4
         DecimalPlaces = 3
         Increment = 0.1
         TabOrder = 2
@@ -233,7 +233,7 @@ object MainForm: TMainForm
         AnchorSideRight.Control = seCoeffD
         Left = 58
         Height = 15
-        Top = 97
+        Top = 85
         Width = 7
         Anchors = [akTop, akRight]
         BorderSpacing.Right = 8
@@ -247,11 +247,11 @@ object MainForm: TMainForm
         AnchorSideRight.Side = asrBottom
         Left = 73
         Height = 23
-        Top = 93
+        Top = 81
         Width = 79
         Alignment = taRightJustify
         Anchors = [akTop, akLeft, akRight]
-        BorderSpacing.Top = 8
+        BorderSpacing.Top = 4
         DecimalPlaces = 3
         Increment = 0.1
         TabOrder = 3
@@ -263,7 +263,7 @@ object MainForm: TMainForm
         AnchorSideTop.Side = asrCenter
         Left = 8
         Height = 15
-        Top = 128
+        Top = 112
         Width = 57
         BorderSpacing.Left = 8
         BorderSpacing.Right = 8
@@ -277,11 +277,11 @@ object MainForm: TMainForm
         AnchorSideRight.Control = lblDegrees
         Left = 73
         Height = 23
-        Top = 124
+        Top = 108
         Width = 79
         Alignment = taRightJustify
         Anchors = [akTop, akLeft, akRight]
-        BorderSpacing.Top = 8
+        BorderSpacing.Top = 4
         MaxValue = 10000
         TabOrder = 4
         OnChange = UpdateLissajousHandler
@@ -292,7 +292,7 @@ object MainForm: TMainForm
         AnchorSideRight.Control = seStepSize
         Left = 20
         Height = 15
-        Top = 159
+        Top = 139
         Width = 45
         Anchors = [akTop, akRight]
         BorderSpacing.Right = 8
@@ -306,11 +306,11 @@ object MainForm: TMainForm
         AnchorSideRight.Side = asrBottom
         Left = 73
         Height = 23
-        Top = 155
+        Top = 135
         Width = 79
         Alignment = taRightJustify
         Anchors = [akTop, akLeft, akRight]
-        BorderSpacing.Top = 8
+        BorderSpacing.Top = 4
         BorderSpacing.Bottom = 8
         DecimalPlaces = 3
         Increment = 0.1
@@ -326,7 +326,7 @@ object MainForm: TMainForm
         AnchorSideRight.Side = asrBottom
         Left = 156
         Height = 15
-        Top = 159
+        Top = 139
         Width = 41
         Anchors = [akTop, akRight]
         BorderSpacing.Left = 4
@@ -336,45 +336,49 @@ object MainForm: TMainForm
     end
     object GroupBox3: TGroupBox
       Left = 4
-      Height = 194
-      Top = 355
+      Height = 248
+      Top = 335
       Width = 209
       Align = alTop
       AutoSize = True
       BorderSpacing.Left = 4
       BorderSpacing.Top = 16
       Caption = 'Rendering'
-      ClientHeight = 174
+      ClientHeight = 228
       ClientWidth = 205
       TabOrder = 2
       object cbSymbolColor: TColorButton
         AnchorSideLeft.Control = GroupBox3
-        AnchorSideTop.Control = GroupBox3
-        Left = 8
+        AnchorSideTop.Control = seSymbolSize
+        AnchorSideTop.Side = asrCenter
+        AnchorSideRight.Control = GroupBox3
+        AnchorSideRight.Side = asrBottom
+        Left = 169
         Height = 25
-        Top = 0
-        Width = 80
+        Top = 28
+        Width = 28
+        Anchors = [akTop, akRight]
         BorderSpacing.Left = 8
+        BorderSpacing.Right = 8
         BorderSpacing.Bottom = 4
         BorderWidth = 2
         ButtonColorAutoSize = False
-        ButtonColorSize = 16
+        ButtonColorSize = 15
         ButtonColor = clRed
-        Caption = 'Symbol'
         Margin = 4
         OnColorChanged = cbSymbolColorColorChanged
       end
       object cbShowAxes: TCheckBox
-        AnchorSideLeft.Control = cbSymbolColor
+        AnchorSideLeft.Control = lblViewDirection
         AnchorSideTop.Control = cbViewDirection
         AnchorSideTop.Side = asrBottom
-        Left = 8
+        Left = 12
         Height = 19
-        Top = 83
+        Top = 137
         Width = 80
         BorderSpacing.Top = 4
         Caption = 'Show axes ('
-        TabOrder = 1
+        TabOrder = 6
         OnChange = cbShowAxesChange
       end
       object lblX: TLabel
@@ -382,9 +386,9 @@ object MainForm: TMainForm
         AnchorSideLeft.Side = asrBottom
         AnchorSideTop.Control = cbShowAxes
         AnchorSideTop.Side = asrCenter
-        Left = 88
+        Left = 92
         Height = 15
-        Top = 85
+        Top = 139
         Width = 6
         Caption = 'x'
         Font.Color = clRed
@@ -396,9 +400,9 @@ object MainForm: TMainForm
         AnchorSideLeft.Side = asrBottom
         AnchorSideTop.Control = cbShowAxes
         AnchorSideTop.Side = asrCenter
-        Left = 98
+        Left = 102
         Height = 15
-        Top = 85
+        Top = 139
         Width = 6
         BorderSpacing.Left = 4
         Caption = 'y'
@@ -411,9 +415,9 @@ object MainForm: TMainForm
         AnchorSideLeft.Side = asrBottom
         AnchorSideTop.Control = cbShowAxes
         AnchorSideTop.Side = asrCenter
-        Left = 108
+        Left = 112
         Height = 15
-        Top = 85
+        Top = 139
         Width = 5
         BorderSpacing.Left = 4
         Caption = 'z'
@@ -426,24 +430,25 @@ object MainForm: TMainForm
         AnchorSideLeft.Side = asrBottom
         AnchorSideTop.Control = cbShowAxes
         AnchorSideTop.Side = asrCenter
-        Left = 113
+        Left = 117
         Height = 15
-        Top = 85
+        Top = 139
         Width = 4
         Caption = ')'
         ParentColor = False
         ParentFont = False
       end
       object cbViewDirection: TComboBox
-        AnchorSideLeft.Control = cbViewAngle
+        AnchorSideLeft.Control = lblViewDirection
+        AnchorSideLeft.Side = asrBottom
         AnchorSideTop.Control = cbViewAngle
         AnchorSideTop.Side = asrBottom
         AnchorSideRight.Control = GroupBox3
         AnchorSideRight.Side = asrBottom
-        Left = 76
+        Left = 95
         Height = 23
-        Top = 56
-        Width = 121
+        Top = 110
+        Width = 102
         Anchors = [akTop, akLeft, akRight]
         BorderSpacing.Top = 4
         BorderSpacing.Right = 8
@@ -471,52 +476,53 @@ object MainForm: TMainForm
           'diagonal 12 (z up)'
         )
         Style = csDropDownList
-        TabOrder = 0
+        TabOrder = 5
         OnChange = cbViewDirectionChange
       end
       object cbBackgroundColor: TColorButton
-        AnchorSideLeft.Control = cbSymbolColor
-        AnchorSideLeft.Side = asrBottom
-        AnchorSideTop.Control = cbSymbolColor
-        Left = 92
+        AnchorSideLeft.Control = GroupBox3
+        AnchorSideTop.Control = GroupBox3
+        AnchorSideRight.Control = cbStickColor
+        AnchorSideRight.Side = asrBottom
+        Left = 12
         Height = 25
         Top = 0
-        Width = 101
-        BorderSpacing.Left = 4
+        Width = 185
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Left = 12
         BorderSpacing.Bottom = 4
         BorderWidth = 2
         ButtonColorAutoSize = False
         ButtonColorSize = 16
         ButtonColor = clBlack
-        Caption = 'Background'
+        Caption = 'Background color'
         Margin = 4
         OnColorChanged = cbBackgroundColorColorChanged
       end
       object Label1: TLabel
-        AnchorSideLeft.Control = cbSymbolColor
+        AnchorSideLeft.Control = lblViewDirection
         AnchorSideTop.Control = cbShowAxes
         AnchorSideTop.Side = asrBottom
-        Left = 8
+        Left = 12
         Height = 60
-        Top = 106
+        Top = 160
         Width = 94
         BorderSpacing.Top = 4
         BorderSpacing.Bottom = 8
         Caption = 'Camera distance: '#13#10'x Rotation:'#13#10'y Rotation:'#13#10'z Rotation:'
       end
       object cbViewAngle: TComboBox
-        AnchorSideLeft.Control = lblViewAngle
-        AnchorSideLeft.Side = asrBottom
-        AnchorSideTop.Control = cbSymbolColor
+        AnchorSideLeft.Control = cbViewDirection
+        AnchorSideTop.Control = seStickDiam
         AnchorSideTop.Side = asrBottom
         AnchorSideRight.Control = GroupBox3
         AnchorSideRight.Side = asrBottom
-        Left = 76
+        Left = 95
         Height = 23
-        Top = 29
-        Width = 121
+        Top = 83
+        Width = 102
         Anchors = [akTop, akLeft, akRight]
-        BorderSpacing.Left = 8
+        BorderSpacing.Top = 4
         BorderSpacing.Right = 8
         ItemHeight = 15
         ItemIndex = 1
@@ -528,37 +534,146 @@ object MainForm: TMainForm
           'parallel projection'
         )
         Style = csDropDownList
-        TabOrder = 2
+        TabOrder = 4
         Text = '45 degrees'
         OnChange = cbViewAngleChange
       end
       object lblViewAngle: TLabel
-        AnchorSideLeft.Control = cbSymbolColor
+        AnchorSideLeft.Control = GroupBox3
         AnchorSideTop.Control = cbViewAngle
         AnchorSideTop.Side = asrCenter
-        Left = 8
+        Left = 12
         Height = 15
-        Top = 33
-        Width = 60
-        Caption = 'View angle:'
+        Top = 87
+        Width = 57
+        BorderSpacing.Left = 12
+        Caption = 'View angle'
       end
       object lblViewDirection: TLabel
-        AnchorSideLeft.Control = cbSymbolColor
+        AnchorSideLeft.Control = GroupBox3
         AnchorSideTop.Control = cbViewDirection
         AnchorSideTop.Side = asrCenter
-        Left = 8
+        Left = 12
+        Height = 15
+        Top = 114
+        Width = 75
+        BorderSpacing.Left = 12
+        BorderSpacing.Right = 8
+        Caption = 'View direction'
+      end
+      object seSymbolSize: TFloatSpinEdit
+        AnchorSideLeft.Control = seStickDiam
+        AnchorSideTop.Control = cbBackgroundColor
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = cbSymbolColor
+        Left = 95
+        Height = 23
+        Top = 29
+        Width = 66
+        Alignment = taRightJustify
+        Anchors = [akTop, akLeft, akRight]
+        DecimalPlaces = 3
+        Increment = 0.001
+        TabOrder = 1
+        Value = 0.05
+        OnChange = seSymbolSizeChange
+      end
+      object seStickDiam: TFloatSpinEdit
+        AnchorSideLeft.Control = cbViewDirection
+        AnchorSideTop.Control = seSymbolSize
+        AnchorSideTop.Side = asrBottom
+        AnchorSideRight.Control = cbStickColor
+        Left = 95
+        Height = 23
+        Top = 56
+        Width = 66
+        Alignment = taRightJustify
+        Anchors = [akTop, akLeft, akRight]
+        BorderSpacing.Top = 4
+        DecimalPlaces = 3
+        Increment = 0.001
+        TabOrder = 3
+        Value = 0.03
+        OnChange = seStickDiamChange
+      end
+      object cbStickColor: TColorButton
+        AnchorSideLeft.Control = GroupBox3
+        AnchorSideTop.Control = seStickDiam
+        AnchorSideTop.Side = asrCenter
+        AnchorSideRight.Control = GroupBox3
+        AnchorSideRight.Side = asrBottom
+        Left = 169
+        Height = 25
+        Top = 55
+        Width = 28
+        Anchors = [akTop, akRight]
+        BorderSpacing.Left = 8
+        BorderSpacing.Right = 8
+        BorderSpacing.Bottom = 4
+        BorderWidth = 2
+        ButtonColorAutoSize = False
+        ButtonColorSize = 15
+        ButtonColor = clRed
+        Margin = 4
+        OnColorChanged = cbStickColorColorChanged
+      end
+      object cbShowSticks: TCheckBox
+        AnchorSideLeft.Control = cbBackgroundColor
+        AnchorSideTop.Control = seStickDiam
+        AnchorSideTop.Side = asrCenter
+        Left = 12
+        Height = 19
+        Top = 58
+        Width = 43
+        Caption = 'Stick'
+        TabOrder = 2
+        OnChange = cbShowSticksChange
+      end
+      object lblStickDiam: TLabel
+        AnchorSideTop.Control = seStickDiam
+        AnchorSideTop.Side = asrCenter
+        AnchorSideRight.Control = seStickDiam
+        Left = 83
         Height = 15
         Top = 60
-        Width = 48
-        Caption = 'View dir.:'
+        Width = 8
+        Anchors = [akTop, akRight]
+        BorderSpacing.Right = 4
+        Caption = 'D'
+      end
+      object cbShowSymbols: TCheckBox
+        AnchorSideLeft.Control = cbBackgroundColor
+        AnchorSideTop.Control = seSymbolSize
+        AnchorSideTop.Side = asrCenter
+        Left = 12
+        Height = 19
+        Top = 31
+        Width = 58
+        Caption = 'Symbol'
+        Checked = True
+        State = cbChecked
+        TabOrder = 0
+        OnChange = cbShowSymbolsChange
+      end
+      object LblSymbolDiam: TLabel
+        AnchorSideTop.Control = seSymbolSize
+        AnchorSideTop.Side = asrCenter
+        AnchorSideRight.Control = seStickDiam
+        Left = 83
+        Height = 15
+        Top = 33
+        Width = 8
+        Anchors = [akTop, akRight]
+        BorderSpacing.Right = 4
+        Caption = 'D'
       end
     end
   end
   object ParamPanel: TPanel
     Left = 0
-    Height = 604
+    Height = 628
     Top = 46
-    Width = 535
+    Width = 545
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
@@ -567,7 +682,7 @@ object MainForm: TMainForm
     Left = 0
     Height = 46
     Top = 0
-    Width = 765
+    Width = 775
     AutoSize = True
     ButtonHeight = 46
     ButtonWidth = 50
@@ -631,8 +746,8 @@ object MainForm: TMainForm
     end
   end
   object Splitter1: TSplitter
-    Left = 535
-    Height = 604
+    Left = 545
+    Height = 628
     Top = 46
     Width = 5
     Align = alRight

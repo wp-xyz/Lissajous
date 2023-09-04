@@ -27,6 +27,9 @@ type
     cbSymbolColor: TColorButton;
     cbShowAxes: TCheckBox;
     cbBackgroundColor: TColorButton;
+    cbStickColor: TColorButton;
+    cbShowSticks: TCheckBox;
+    cbShowSymbols: TCheckBox;
     ColorButton1: TColorButton;
     cbViewDirection: TComboBox;
     cbViewAngle: TComboBox;
@@ -34,6 +37,9 @@ type
     edFormulaY: TComboBox;
     edFormulaZ: TComboBox;
     acExit: TFileExit;
+    lblStickDiam: TLabel;
+    LblSymbolDiam: TLabel;
+    seSymbolSize: TFloatSpinEdit;
     GroupBox3: TGroupBox;
     ImageList: TImageList;
     Label1: TLabel;
@@ -66,6 +72,7 @@ type
     seCoeffB: TFloatSpinEdit;
     seStepSize: TFloatSpinEdit;
     seStepCount: TSpinEdit;
+    seStickDiam: TFloatSpinEdit;
     Splitter1: TSplitter;
     ToolBar: TToolBar;
     tbLoadParams: TToolButton;
@@ -84,15 +91,20 @@ type
     procedure acSaveParamsExecute(Sender: TObject);
     procedure ApplicationPropertiesIdle(Sender: TObject; var Done: Boolean);
     procedure cbBackgroundColorColorChanged(Sender: TObject);
+    procedure cbShowSticksChange(Sender: TObject);
+    procedure cbStickColorColorChanged(Sender: TObject);
     procedure cbViewAngleChange(Sender: TObject);
     procedure cbShowAxesChange(Sender: TObject);
     procedure cbSymbolColorColorChanged(Sender: TObject);
     procedure cbViewDirectionChange(Sender: TObject);
+    procedure cbShowSymbolsChange(Sender: TObject);
     procedure edFormulaDropDown(Sender: TObject);
     procedure FormActivate(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
     procedure FormCreate(Sender: TObject);
     procedure FormDestroy(Sender: TObject);
+    procedure seStickDiamChange(Sender: TObject);
+    procedure seSymbolSizeChange(Sender: TObject);
     procedure UpdateLissajousHandler(Sender: TObject);
   private
     FActivated: Boolean;
@@ -317,6 +329,26 @@ begin
   FViewer.BackColor := cbBackgroundColor.ButtonColor;
 end;
 
+procedure TMainForm.cbShowAxesChange(Sender: TObject);
+begin
+  FViewer.ShowAxes := cbShowAxes.Checked;
+end;
+
+procedure TMainForm.cbShowSticksChange(Sender: TObject);
+begin
+  FViewer.ShowSticks := cbShowSticks.Checked;
+end;
+
+procedure TMainForm.cbStickColorColorChanged(Sender: TObject);
+begin
+  FViewer.StickColor := cbStickColor.ButtonColor;
+end;
+
+procedure TMainForm.cbSymbolColorColorChanged(Sender: TObject);
+begin
+  FViewer.SymbolColor := cbSymbolColor.ButtonColor;
+end;
+
 procedure TMainForm.cbViewAngleChange(Sender: TObject);
 var
   angle: Double;
@@ -332,16 +364,6 @@ begin
     FViewer.CameraAngle := angle;
     FViewer.InvalidateView;
   end;
-end;
-
-procedure TMainForm.cbShowAxesChange(Sender: TObject);
-begin
-  FViewer.ShowAxes := cbShowAxes.Checked;
-end;
-
-procedure TMainForm.cbSymbolColorColorChanged(Sender: TObject);
-begin
-  FViewer.SymbolColor := cbSymbolColor.ButtonColor;
 end;
 
 procedure TMainForm.cbViewDirectionChange(Sender: TObject);
@@ -379,6 +401,11 @@ begin
   FViewer.CameraRotY := ROTATIONS[cbViewDirection.ItemIndex, 1];
   FViewer.CameraRotZ := ROTATIONS[cbViewDirection.ItemIndex, 2];
   FViewer.InvalidateView;
+end;
+
+procedure TMainForm.cbShowSymbolsChange(Sender: TObject);
+begin
+  FViewer.ShowSymbols := cbShowSymbols.Checked;
 end;
 
 procedure TMainForm.edFormulaDropDown(Sender: TObject);
@@ -455,43 +482,6 @@ procedure TMainForm.FormDestroy(Sender: TObject);
 begin
   FGenerator.Free;
 end;
-                              (*
-procedure TMainForm.Formula1(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
-begin
-  P.X := cos(ACoeffs[0] * t);
-  P.Y := sin(ACoeffs[1] * t);
-  P.Z := sin(ACoeffs[2] * t);
-end;
-
-procedure TMainForm.Formula2(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
-begin
-  P.X := (cos(ACoeffs[0] * t) + cos(ACoeffs[1] * t)) / 2;
-  P.Y := (sin(ACoeffs[0] * t) + sin(ACoeffs[2] * t)) / 2;
-  P.Z := sin(ACoeffs[3] * t);
-end;
-
-procedure TMainForm.Formula3(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
-begin
-  P.X := sin(ACoeffs[0] * t) * ( 1.0 + cos(ACoeffs[1] * t)) / 2;
-  P.Y := sin(ACoeffs[0] * t) * ( 1.0 + sin(ACoeffs[2] * t)) / 2;
-  P.Z := sin(ACoeffs[3] * t);
-end;
-
-procedure TMainForm.FormulaUser(t: Double; const ACoeffs: TLissCoeffs; out P: TPoint3D);
-var
-  i: Integer;
-begin
-  for i := 0 to 2 do begin
-    FParsers[i].Identifiers.IdentifierByName('t').AsFloat := t;
-    FParsers[i].Identifiers.IdentifierByName('a').AsFloat := ACoeffs[0];
-    FParsers[i].Identifiers.IdentifierByName('b').AsFloat := ACoeffs[1];
-    FParsers[i].Identifiers.IdentifierByName('c').AsFloat := ACoeffs[2];
-    FParsers[i].Identifiers.IdentifierByName('d').AsFloat := ACoeffs[3];
-  end;
-  P.X := ArgToFloat(FParsers[0].Evaluate);
-  P.Y := ArgToFloat(FParsers[1].Evaluate);
-  P.Z := ArgToFloat(FParsers[2].Evaluate);
-end;                *)
 
 function TMainForm.GetIniFileName: String;
 begin
@@ -523,13 +513,17 @@ begin
 
   section := 'Rendering';
   cbBackgroundColor.ButtonColor := ini.ReadInteger(section, 'BackgroundColor', clBlack);
-  cbSymbolColor.ButtonColor := ini.ReadInteger(section, 'SymbolColor', clRed);
+  seStickDiam.Value := ini.ReadFloat(section, 'StickDiameter', seStickDiam.Value);
+  cbStickColor.ButtonColor := ini.ReadInteger(section, 'StickColor', Integer(cbStickColor.ButtonColor));
+  seSymbolSize.Value := ini.ReadFloat(section, 'SymbolSize', seSymbolSize.Value);
+  cbSymbolColor.ButtonColor := ini.ReadInteger(section, 'SymbolColor', Integer(cbSymbolColor.ButtonColor));
   cbViewAngle.ItemIndex := ini.ReadInteger(section, 'ViewAngle', cbViewAngle.ItemIndex);
   cbViewAngleChange(nil);
   cbViewDirection.ItemIndex := ini.ReadInteger(section, 'ViewDirection', 0);
   cbShowAxes.Checked := ini.ReadBool(section, 'ShowAxes', false);
+  cbShowSticks.Checked := ini.ReadBool(section, 'ShowSticks', false);
+  cbShowSymbols.Checked := ini.ReadBool(section, 'ShowSymbols', true);
 
-  FViewer.SymbolSize := ini.ReadFloat(section, 'SymbolSize', FViewer.SymbolSize);
   FViewer.CameraDistance := ini.ReadFloat(section, 'CameraDistance', FViewer.CameraDistance);
   FViewer.CameraRotX := ini.ReadFloat(section, 'RotationX', FViewer.CameraRotX);
   FViewer.CameraRotY := ini.ReadFloat(section, 'RotationY', FViewer.CameraRotY);
@@ -539,46 +533,6 @@ begin
 
   dec(FViewerLock);
 end;
-               (*
-procedure TMainForm.PackParams(out AData: TLissFileRec);
-var
-  i: byte;
-  x: Single;
-begin
-  AData := Default(TLissFileRec);
-  for i := 0 to 4 do
-    AData[i] := byte(SIGNATURE[i+1]);
-
-  if rbFormula1.Checked then
-    AData[5] := 1
-  else if rbFormula2.Checked then
-    AData[5] := 2
-  else if rbFormula3.Checked then
-    AData[5] := 3;
-
-  AData[6] := 1;
-
-  AData[7] := cbSymbolColor.ButtonColor;
-  for i := Low(ColorList) to High(ColorList) do
-    if ColorList[i] = cbSymbolColor.ButtonColor then
-      AData[7] := i;
-
-  AData[8] := 0;  // Boolean2Int(smooth);
-  AData[9] := 0;  // Boolean2Int(grid);
-  AData[10] := seStepCount.Value;
-
-  x := -seStepSize.Value;
-  AData[11] := PDWord(@x)^;
-  for i := Low(IncValues) to High(IncValues) do
-    if IncValues[i] = seStepSize.Value then
-      AData[11] := i;
-
-  x := seCoeffA.Value;  AData[12] := PDWord(@x)^;
-  x := seCoeffB.Value;  AData[13] := PDWord(@x)^;
-  x := seCoeffC.Value;  AData[14] := PDWord(@x)^;
-  x := seCoeffD.Value;  AData[15] := PDWord(@x)^;
-end;
-*)
 
 procedure TMainForm.ReadFromIni;
 var
@@ -673,12 +627,16 @@ begin
 
   section := 'Rendering';
   ini.WriteInteger(section, 'BackgroundColor', cbBackgroundColor.ButtonColor);
+  ini.WriteInteger(section, 'StickColor', cbStickColor.ButtonColor);
+  ini.WriteFloat(section, 'StickDiameter', seStickDiam.Value);
   ini.WriteInteger(section, 'SymbolColor', cbSymbolColor.ButtonColor);
+  ini.WriteFloat(section, 'SymbolSize', seSymbolSize.Value);
   ini.WriteInteger(section, 'ViewDirection', cbViewDirection.ItemIndex);
   ini.WriteInteger(section, 'ViewAngle', cbViewAngle.ItemIndex);
   ini.WriteBool(section, 'ShowAxes', cbShowAxes.Checked);
+  ini.WriteBool(section, 'ShowSticks', cbShowSticks.Checked);
+  ini.WriteBool(section, 'ShowSymbols', cbShowSymbols.Checked);
   ini.WriteString(section, 'Projection', GetEnumName(TypeInfo(TProjection), cbViewAngle.ItemIndex));
-  ini.WriteFloat(section, 'SymbolSize', FViewer.SymbolSize);
   ini.WriteFloat(section, 'CameraDistance', FViewer.CameraDistance);
   ini.WriteFloat(section, 'RotationX', FViewer.CameraRotX);
   ini.WriteFloat(section, 'RotationY', FViewer.CameraRotY);
@@ -715,6 +673,16 @@ begin
   Caption := APP_NAME + ' - ' + AFileName;
 
   FFileName := AFileName;
+end;
+
+procedure TMainForm.seStickDiamChange(Sender: TObject);
+begin
+  FViewer.StickDiameter := seStickDiam.Value;
+end;
+
+procedure TMainForm.seSymbolSizeChange(Sender: TObject);
+begin
+  FViewer.SymbolSize := seSymbolSize.Value;
 end;
 
 function TMainForm.UnpackParams(AData: TLissFileRec): Boolean;

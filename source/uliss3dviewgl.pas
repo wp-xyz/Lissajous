@@ -17,7 +17,7 @@ const
   CAMERA_DISTANCE = 5.0;
 
   SYMBOL_COLOR = clRed;
-  SYMBOL_SIZE = 0.05;
+  SYMBOL_SIZE = 0.10;
 
 type
   ToglVector2f = array[0..1] of GLFloat;
@@ -46,6 +46,11 @@ type
     FCameraRotX, FCameraRotY, FCameraRotZ: Double;
     FMouseX, FMouseY: Double;
     FShowAxes: Boolean;
+    FShowSticks: Boolean;
+    FShowSymbols: Boolean;
+    FCylinder: PGLUQuadric;
+    FStickColor: TColor;
+    FStickDiameter: Double;
     FSphere: PGLUQuadric;
     FSymbolColor: TColor;
     FSymbolSize: Double;
@@ -54,19 +59,27 @@ type
     procedure SetPoints(const AValue: TPoint3dArray);
     procedure SetProjection(AValue: TProjection);
     procedure SetShowAxes(AValue: Boolean);
+    procedure SetShowSticks(AValue: Boolean);
+    procedure SetShowSymbols(AValue: Boolean);
+    procedure SetStickColor(AValue: TColor);
+    procedure SetStickDiameter(AValue: Double);
     procedure SetSymbolColor(AValue: TColor);
+    procedure SetSymbolSize(AValue: Double);
 
   protected
     FInitDone: Boolean;
     FPoints: TPoint3dArray;
     procedure DrawAxes;
+    procedure DrawCylinder(P1, P2: TPoint3d);
     procedure DrawScene;
+    procedure DrawSphere(APoint: TPoint3d);
     procedure InitGL;
     procedure InitLights;
     procedure ToPerspective;
 
   public
     constructor Create(AOwner: TComponent); override;
+    destructor Destroy; override;
     procedure InvalidateView;
     procedure ToBitmap(ABitmap: TCustomBitmap);
 
@@ -79,8 +92,12 @@ type
     property Points: TPoint3dArray read FPoints write SetPoints;
     property Projection: TProjection read FProjection write SetProjection;
     property ShowAxes: Boolean read FShowAxes write SetShowAxes;
+    property ShowSticks: Boolean read FShowSticks write SetShowSticks;
+    property ShowSymbols: Boolean read FShowSymbols write SetShowSymbols;
+    property StickColor: TColor read FStickColor write SetStickColor;
+    property StickDiameter: Double read FStickDiameter write SetStickDiameter;
     property SymbolColor: TColor read FSymbolColor write SetSymbolColor;
-    property SymbolSize: Double read FSymbolSize write FSymbolSize;
+    property SymbolSize: Double read FSymbolSize write SetSymbolSize;
   end;
 
 implementation
@@ -135,16 +152,32 @@ begin
 
   FCameraAngle := VIEW_ANGLE;
   FCameraDistance := CAMERA_DISTANCE;
+  FStickColor := SYMBOL_COLOR;
+  FStickDiameter := SYMBOL_SIZE * 0.5;
   FSymbolColor := SYMBOL_COLOR;
   FSymbolSize := SYMBOL_SIZE;
 
   FSphere := gluNewQuadric();
   gluQuadricDrawStyle(FSphere, GLU_FILL);
+
+  FCylinder := gluNewQuadric();
+  gluQuadricDrawStyle(FCylinder, GLU_FILL);
+  gluQuadricNormals(FCylinder, GLU_SMOOTH);
+
+  FShowAxes := false;
+  FShowSymbols := true;
+  FShowSticks := false;
+end;
+
+destructor TLiss3dViewerFrame.Destroy;
+begin
+  gluDeleteQuadric(FCylinder);
+  gluDeleteQuadric(FSphere);
+  inherited;
 end;
 
 procedure TLiss3dViewerFrame.DrawAxes;
 const
-  EPS = 1e-3;
   AXIS_LENGTH = 100;
 var
   Origin: TPoint3d;
@@ -189,26 +222,100 @@ begin
     glEnable(GL_LIGHTING);
 end;
 
+// Adapted from:
+//   https://community.khronos.org/t/glucylinder-between-two-points/34447
+procedure TLiss3dViewerFrame.DrawCylinder(P1, P2: TPoint3d);
+const
+  PRECISION = 9;
+var
+  radius: Double;
+  v, vx, vy, vz, rx, ry, ax: Double;
+  R2D: Double;
+  tmp: TPoint3d;
+begin
+  radius := FStickDiameter * 0.5;
+
+  if (P1.x = P2.x) and (P1.z = P2.z) and (P1.y < P2.y) then
+  begin
+    tmp := P1;
+    P1 := P2;
+    P2 := tmp;
+  end;
+
+  glPushMatrix;
+  glTranslatef(P1.x, P1.y, P1.z);
+
+  // Orientation vectors
+  vx := P2.x - P1.x;  // component in x-direction
+  vy := P2.y - P1.y;  // component in y-direction
+  vz := P2.z - P1.z;  // component in z-direction
+
+  v := sqrt(vx*vx + vy*vy + vz*vz);  // cylinder length
+
+  // rotation vector, z x r
+  rx := -vy*vz;
+  ry := +vx*vz;
+  ax := 0.0;
+  if vz = 0 then
+  begin
+    ax := RadToDeg(arccos(vx/v));  // Rotation angle in x-y plane
+    if vx <= 0 then ax := -ax;
+  end else
+  begin
+    ax := RadToDeg(arccos(vz/v));  // Rotation angle
+    if vz <= 0 then ax := -ax;
+  end;
+
+  if vz = 0 then
+  begin
+    glRotateD(90.0, 0, 1, 0.0);     // Rotate & align with x axis
+    glRotateD(ax, -1.0, 0.0, 0.0);  // Rotate to point 2 in x-y plane
+  end else
+    glRotateD(ax, rx, ry, 0);       // Rotate about rotation vector
+
+  // Draw the clyinder
+  gluCylinder(FCylinder, radius, radius, v, PRECISION, PRECISION);
+
+  glPopMatrix;
+end;
+
 procedure TLiss3dViewerFrame.DrawScene;
 var
   i: Integer;
-  P: TPoint3d;
+  P, P0: TPoint3d;
   hasColorMaterial: Boolean;
 begin
   hasColorMaterial := (glIsEnabled(GL_COLOR_MATERIAL) = GL_TRUE);
   //glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
   glEnable(GL_COLOR_MATERIAL);
 
-  SetOpenGLColor(FSymbolColor);
   for i:=0 to High(FPoints) do begin
     P := FPoints[i];
-    glPushMatrix;
-    glTranslatef(P.x, P.y, P.z);
-    gluSphere(FSphere, FSymbolSize, 18, 9);
-    glPopMatrix;
+    if FShowSymbols then
+    begin
+      SetOpenGLColor(FSymbolColor);
+      DrawSphere(P);
+    end;
+    if FShowSticks then
+    begin
+      if i > 0 then
+      begin
+        SetOpenGLColor(FStickColor);
+        DrawCylinder(P0, P);
+      end;
+      P0 := P;
+    end;
   end;
 
   if not hasColorMaterial then glDisable(GL_COLOR_MATERIAL);
+end;
+
+procedure TLiss3dViewerFrame.DrawSphere(APoint: TPoint3d);
+begin
+  glPushMatrix;
+  glTranslatef(APoint.x, APoint.y, APoint.z);
+  gluSphere(FSphere, FSymbolSize * 0.5, 18, 9);
+  glPopMatrix;
 end;
 
 procedure TLiss3dViewerFrame.InitGL;
@@ -338,7 +445,7 @@ begin
   glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT or GL_STENCIL_BUFFER_BIT);
 
   // save the initial ModelView matrix before modifying ModelView matrix
-  //glPushMatrix();
+  glPushMatrix();
 
   // transform modelview matrix
   glTranslatef(0, 0, -FCameraDistance);
@@ -349,7 +456,7 @@ begin
   DrawAxes;
   DrawScene;
 
-  //glPopMatrix();
+  glPopMatrix();
 
   OpenGLControl.SwapBuffers;
 end;
@@ -390,11 +497,51 @@ begin
   OpenGLControl.Invalidate;
 end;
 
+procedure TLiss3dViewerFrame.SetShowSticks(AValue: Boolean);
+begin
+  if AValue = FShowSticks then
+    exit;
+  FShowSticks := AValue;
+  OpenGLControl.Invalidate;
+end;
+
+procedure TLiss3dViewerFrame.SetShowSymbols(AValue: Boolean);
+begin
+  if AValue = FShowSymbols then
+    exit;
+  FShowSymbols := AValue;
+  OpenGLControl.Invalidate;
+end;
+
+procedure TLiss3dViewerFrame.SetStickColor(AValue: TColor);
+begin
+  if AValue = FStickColor then
+    exit;
+  FStickColor := AValue;
+  OpenGLControl.Invalidate;
+end;
+
+procedure TLiss3dViewerFrame.SetStickDiameter(AValue: Double);
+begin
+  if AValue = FStickDiameter then
+    exit;
+  FStickDiameter := AValue;
+  OpenGLControl.Invalidate;
+end;
+
 procedure TLiss3dViewerFrame.SetSymbolColor(AValue: TColor);
 begin
   if AValue = FSymbolColor then
     exit;
   FSymbolColor := AValue;
+  OpenGLControl.Invalidate;
+end;
+
+procedure TLiss3dViewerFrame.SetSymbolSize(AValue: Double);
+begin
+  if AValue = FSymbolSize then
+    exit;
+  FSymbolSize := AValue;
   OpenGLControl.Invalidate;
 end;
 

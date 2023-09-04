@@ -1,23 +1,28 @@
 [Formula]
-x=sin(a*t) * (1 + cos(b*t)) / 2
-y=sin(a*t) * (1 + sin(c*t)) / 2
-z=sin(d*t)
-a=2
-b=5
-c=25
-d=0.01
-StepCount=7000
-StepSize=3
+x=cos(a*t)
+y=sin(b*t)
+z=sin(c*t)
+a=0
+b=4.5
+c=9
+d=5
+StepCount=160
+StepSize=1
 
 [Rendering]
-BackgroundColor=4227072
-SymbolColor=16512
-ViewDirection=0
+BackgroundColor=9546
+SymbolColor=16777215
+ViewDirection=4
 ShowAxes=0
-SymbolSize=0.05
+SymbolSize=0.1
 CameraAngle=45
-CameraDistance=4.20110074347369
-RotationX=-48
-RotationY=-1
-RotationZ=-90
-Projection=oglPerspective
+CameraDistance=21.2365737632582
+RotationX=-90
+RotationY=0
+RotationZ=90
+Projection=
+StickColor=12632256
+StickDiameter=0.03
+ViewAngle=3
+ShowSticks=1
+ShowSymbols=1
