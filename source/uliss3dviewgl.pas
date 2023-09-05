@@ -41,6 +41,7 @@ type
 
   private
     FBackColor: TColor;
+    FBackAlpha: Double;
     FCameraAngle: Double;
     FCameraDistance: Double;
     FCameraRotX, FCameraRotY, FCameraRotZ: Double;
@@ -84,6 +85,7 @@ type
     procedure ToBitmap(ABitmap: TCustomBitmap);
 
     property BackColor: TColor read FBackColor write SetBackColor;
+    property BackAlpha: double read FBackAlpha write FBackAlpha;
     property CameraAngle: Double read FCameraAngle write FCameraAngle;
     property CameraDistance: Double read FCameraDistance write FCameraDistance;
     property CameraRotX: Double read FCameraRotX write FCameraRotX;
@@ -156,6 +158,7 @@ begin
   FStickDiameter := SYMBOL_SIZE * 0.5;
   FSymbolColor := SYMBOL_COLOR;
   FSymbolSize := SYMBOL_SIZE;
+  FBackAlpha := 1.0;
 
   FSphere := gluNewQuadric();
   gluQuadricDrawStyle(FSphere, GLU_FILL);
@@ -329,8 +332,8 @@ begin
   //glHint(GL_POLYGON_SMOOTH_HINT, GL_NICEST);
   glEnable(GL_DEPTH_TEST);
   glEnable(GL_LIGHTING);
-  glEnable(GL_TEXTURE_2D);
-  glEnable(GL_CULL_FACE);
+  //glEnable(GL_TEXTURE_2D);
+  //glEnable(GL_CULL_FACE);
 
   // track material ambient and diffuse from surface color, call it before glEnable(GL_COLOR_MATERIAL)
   //glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
@@ -388,8 +391,8 @@ procedure TLiss3dViewerFrame.OpenGLControlMouseMove(Sender: TObject; Shift: TShi
   X, Y: Integer);
 begin
   if (ssLeft in Shift) then begin
-    FCameraRotY := FCameraRotY + (x - FMouseX);
     FCameraRotX := FCameraRotX + (y - FMouseY);
+    FCameraRotY := FCameraRotY + (x - FMouseX);
     FMouseX := X;
     FMouseY := Y;
     OpenGLControl.Invalidate;
@@ -438,7 +441,7 @@ begin
     Red(FBackColor)/255,
     Green(FBackColor)/255,
     Blue(FBackColor)/255,
-    1.0
+    FBackAlpha
   );
   glClear(GL_COLOR_BUFFER_BIT or GL_DEPTH_BUFFER_BIT or GL_STENCIL_BUFFER_BIT);
 

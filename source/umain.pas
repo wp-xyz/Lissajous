@@ -30,6 +30,7 @@ type
     cbStickColor: TColorButton;
     cbShowSticks: TCheckBox;
     cbShowSymbols: TCheckBox;
+    cbTransparent: TCheckBox;
     ColorButton1: TColorButton;
     cbViewDirection: TComboBox;
     cbViewAngle: TComboBox;
@@ -49,7 +50,7 @@ type
     LblSymbolDiam: TLabel;
     seXRotation: TFloatSpinEdit;
     seSymbolSize: TFloatSpinEdit;
-    GroupBox3: TGroupBox;
+    gbRendering: TGroupBox;
     ImageList: TImageList;
     lblViewAngle: TLabel;
     lblViewDirection: TLabel;
@@ -71,8 +72,8 @@ type
     RecentFilesPopup: TPopupMenu;
     SaveDialog: TSaveDialog;
     seCoeffA: TFloatSpinEdit;
-    GroupBox1: TGroupBox;
-    GroupBox2: TGroupBox;
+    gbExpressions: TGroupBox;
+    gbCoefficients: TGroupBox;
     ParamsPanel: TPanel;
     ParamPanel: TPanel;
     seCoeffD: TFloatSpinEdit;
@@ -83,7 +84,7 @@ type
     seStickDiam: TFloatSpinEdit;
     seYRotation: TFloatSpinEdit;
     seZRotation: TFloatSpinEdit;
-    Splitter1: TSplitter;
+    Splitter: TSplitter;
     ToolBar: TToolBar;
     tbLoadParams: TToolButton;
     tbSaveParams: TToolButton;
@@ -103,11 +104,13 @@ type
     procedure cbBackgroundColorColorChanged(Sender: TObject);
     procedure cbShowSticksChange(Sender: TObject);
     procedure cbStickColorColorChanged(Sender: TObject);
+    procedure cbTransparentChange(Sender: TObject);
     procedure cbViewAngleChange(Sender: TObject);
     procedure cbShowAxesChange(Sender: TObject);
     procedure cbSymbolColorColorChanged(Sender: TObject);
     procedure cbViewDirectionChange(Sender: TObject);
     procedure cbShowSymbolsChange(Sender: TObject);
+    procedure cbViewDirectionDropDown(Sender: TObject);
     procedure edFormulaDropDown(Sender: TObject);
     procedure FormActivate(Sender: TObject);
     procedure FormCloseQuery(Sender: TObject; var CanClose: Boolean);
@@ -125,6 +128,7 @@ type
     FGenerator: TLiss3dGen;
     FViewer: TLiss3dViewerFrame;
     FViewerLock: Integer;
+    function CalcComboBoxItemWidth(AComboBox: TComboBox): Integer;
     procedure ViewerMouseMove(Sender: TObject; Shift: TShiftState; X, Y: Integer);
 
   private
@@ -321,6 +325,24 @@ begin
   dec(FViewerLock);
 end;
 
+function TMainForm.CalcComboBoxItemWidth(AComboBox: TComboBox): Integer;
+var
+  bmp: TBitmap;
+  i, w: Integer;
+begin
+  bmp := TBitmap.Create;
+  try
+    bmp.SetSize(1, 1);
+    bmp.Canvas.Font.Assign(ACombobox.Font);
+    w := 0;
+    for i := 0 to ACombobox.Items.Count-1 do
+      w := Max(w, bmp.Canvas.TextWidth(ACombobox.Items[i]));
+    Result := w + 20;
+  finally
+    bmp.Free;
+  end;
+end;
+
 procedure TMainForm.Calculate;
 begin
   if FViewerLock = 0 then
@@ -350,6 +372,15 @@ end;
 procedure TMainForm.cbStickColorColorChanged(Sender: TObject);
 begin
   FViewer.StickColor := cbStickColor.ButtonColor;
+end;
+
+procedure TMainForm.cbTransparentChange(Sender: TObject);
+begin
+  if cbTransparent.Checked then
+    FViewer.BackAlpha := 0.0
+  else
+    FViewer.BackAlpha := 1.0;
+  FViewer.Invalidate;
 end;
 
 procedure TMainForm.cbSymbolColorColorChanged(Sender: TObject);
@@ -416,26 +447,16 @@ begin
   FViewer.ShowSymbols := cbShowSymbols.Checked;
 end;
 
-procedure TMainForm.edFormulaDropDown(Sender: TObject);
-var
-  bmp: TBitmap;
-  combobox: TCombobox;
-  i, w: Integer;
+procedure TMainForm.cbViewDirectionDropDown(Sender: TObject);
 begin
-  if not (Sender is TComboBox) then
-    exit;
-  combobox := TComboBox(Sender);
-  bmp := TBitmap.Create;
-  try
-    bmp.SetSize(1, 1);
-    bmp.Canvas.Font.Assign(combobox.Font);
-    w := 0;
-    for i := 0 to combobox.Items.Count-1 do
-      w := Max(w, bmp.Canvas.TextWidth(combobox.Items[i]));
-    combobox.ItemWidth := w + 20;
-  finally
-    bmp.Free;
-  end;
+  if Sender is TComboBox then
+    TComboBox(Sender).ItemWidth := CalcComboBoxItemWidth(TComboBox(Sender));
+end;
+
+procedure TMainForm.edFormulaDropDown(Sender: TObject);
+begin
+  if Sender is TComboBox then
+    TComboBox(Sender).ItemWidth := CalcComboBoxItemWidth(TComboBox(Sender));
 end;
 
 procedure TMainForm.FormActivate(Sender: TObject);
