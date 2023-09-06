@@ -2,10 +2,10 @@ object MainForm: TMainForm
   Left = 314
   Height = 677
   Top = 130
-  Width = 775
+  Width = 791
   Caption = 'Lissajous Curve Generator'
   ClientHeight = 677
-  ClientWidth = 775
+  ClientWidth = 791
   ShowHint = True
   LCLVersion = '3.99.0.0'
   OnActivate = FormActivate
@@ -13,7 +13,7 @@ object MainForm: TMainForm
   OnCreate = FormCreate
   OnDestroy = FormDestroy
   object ParamsPanel: TPanel
-    Left = 550
+    Left = 566
     Height = 631
     Top = 46
     Width = 213
@@ -851,7 +851,7 @@ object MainForm: TMainForm
     Left = 0
     Height = 631
     Top = 46
-    Width = 545
+    Width = 561
     Align = alClient
     BevelOuter = bvNone
     TabOrder = 1
@@ -860,7 +860,7 @@ object MainForm: TMainForm
     Left = 0
     Height = 46
     Top = 0
-    Width = 775
+    Width = 791
     AutoSize = True
     ButtonHeight = 46
     ButtonWidth = 50
@@ -924,7 +924,7 @@ object MainForm: TMainForm
     end
   end
   object Splitter: TSplitter
-    Left = 545
+    Left = 561
     Height = 631
     Top = 46
     Width = 5
@@ -1287,7 +1287,7 @@ object MainForm: TMainForm
     object acExit: TFileExit
       Category = 'File'
       Caption = 'E&xit'
-      Hint = 'Exit'
+      Hint = 'Close application'
       ImageIndex = 4
     end
   end

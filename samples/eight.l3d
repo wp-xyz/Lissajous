@@ -12,14 +12,14 @@ StepSize=1
 [Rendering]
 BackgroundColor=9546
 SymbolColor=16777215
-ViewDirection=4
+ViewDirection=3
 ShowAxes=0
 SymbolSize=0.1
 CameraAngle=45
 CameraDistance=21.2365737632582
 RotationX=-90
 RotationY=0
-RotationZ=90
+RotationZ=-90
 Projection=
 StickColor=12632256
 StickDiameter=0.03

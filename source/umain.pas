@@ -665,7 +665,6 @@ begin
   ini.WriteBool(section, 'ShowAxes', cbShowAxes.Checked);
   ini.WriteBool(section, 'ShowSticks', cbShowSticks.Checked);
   ini.WriteBool(section, 'ShowSymbols', cbShowSymbols.Checked);
-  ini.WriteString(section, 'Projection', GetEnumName(TypeInfo(TProjection), cbViewAngle.ItemIndex));
   ini.WriteFloat(section, 'CameraDistance', FViewer.CameraDistance);
   ini.WriteFloat(section, 'RotationX', FViewer.CameraRotX);
   ini.WriteFloat(section, 'RotationY', FViewer.CameraRotY);
