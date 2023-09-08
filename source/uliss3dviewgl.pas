@@ -1,11 +1,13 @@
 unit uLiss3dViewGL;
 
 {$mode ObjFPC}{$H+}
+{.$DEFINE DEBUG_VIEWS}
+{.$DEFINE DEBUG_MATRIX}
 
 interface
 
 uses
-  Classes, SysUtils, Types, Math, Graphics, Forms, Controls,
+  Classes, SysUtils, Types, Math, Graphics, Forms, Controls, LazLoggerBase,
   gl, glu, OpenGLContext,
   uLiss3dTypes;
 
@@ -25,6 +27,7 @@ type
   ToglVector4f = array[0..3] of GLFloat;
 
   TProjection = (oglPerspective, oglOrthographic);
+  TMouseMode = (mmFree, mmRotX, mmRotY, mmRotZ, mmOffset, mmDistance);
 
   { TViewerFrame }
 
@@ -44,7 +47,7 @@ type
     FBackAlpha: Double;
     FCameraAngle: Double;
     FCameraDistance: Double;
-    FCameraRotX, FCameraRotY, FCameraRotZ: Double;
+    FViewMatrix: TMatrix4f;
     FMouseX, FMouseY: Double;
     FShowAxes: Boolean;
     FShowSticks: Boolean;
@@ -56,6 +59,7 @@ type
     FSymbolColor: TColor;
     FSymbolSize: Double;
     FProjection: TProjection;
+    FMouseMode: TMouseMode;
     procedure SetBackColor(AValue: TColor);
     procedure SetPoints(const AValue: TPoint3dArray);
     procedure SetProjection(AValue: TProjection);
@@ -72,6 +76,9 @@ type
     FPoints: TPoint3dArray;
     procedure DrawAxes;
     procedure DrawCylinder(P1, P2: TPoint3d);
+    {$IFDEF DEBUG_VIEWS}
+    procedure DrawDebugScene;
+    {$ENDIF}
     procedure DrawScene;
     procedure DrawSphere(APoint: TPoint3d);
     procedure InitGL;
@@ -81,16 +88,20 @@ type
   public
     constructor Create(AOwner: TComponent); override;
     destructor Destroy; override;
+    function GetViewMatrix: TMatrix4f;
     procedure InvalidateView;
+    procedure RotateAroundX(ADegrees: Double);
+    procedure RotateAroundY(ADegrees: Double);
+    procedure RotateAroundZ(ADegrees: Double);
+    procedure SetViewMatrix(m: TMatrix4f);
     procedure ToBitmap(ABitmap: TCustomBitmap);
+    procedure TranslateBy(dx, dy: Double);
 
     property BackColor: TColor read FBackColor write SetBackColor;
     property BackAlpha: double read FBackAlpha write FBackAlpha;
     property CameraAngle: Double read FCameraAngle write FCameraAngle;
     property CameraDistance: Double read FCameraDistance write FCameraDistance;
-    property CameraRotX: Double read FCameraRotX write FCameraRotX;
-    property CameraRotY: Double read FCameraRotY write FCameraRotY;
-    property CameraRotZ: Double read FCameraRotZ write FCameraRotZ;
+    property MouseMode: TMouseMode read FMouseMode write FMouseMode;
     property Points: TPoint3dArray read FPoints write SetPoints;
     property Projection: TProjection read FProjection write SetProjection;
     property ShowAxes: Boolean read FShowAxes write SetShowAxes;
@@ -101,6 +112,13 @@ type
     property SymbolColor: TColor read FSymbolColor write SetSymbolColor;
     property SymbolSize: Double read FSymbolSize write SetSymbolSize;
   end;
+
+procedure Identity(var m: TMatrix4f);
+procedure RotateX(var m: TMatrix4f; Angle: GLfloat);
+procedure RotateY(var m: TMatrix4f; Angle: GLfloat);
+procedure RotateZ(var m: TMatrix4f; Angle: GLfloat);
+procedure Scale(var m: TMatrix4f; Factor: GLfloat);
+procedure Translate(var m: TMatrix4f; x, y, z: GLfloat);
 
 implementation
 
@@ -145,6 +163,86 @@ begin
   glColor4f(Red(AColor)*f, Green(AColor)*f, Blue(AColor)*f, Alpha);
 end;
 
+procedure Identity(var m: TMatrix4f);
+const
+  mi: TMatrix4f = ((1, 0, 0, 0), (0, 1, 0, 0), (0, 0, 1, 0), (0, 0, 0, 1));
+begin
+  m := mi;
+end;
+
+procedure RotateX(var m: TMatrix4f; Angle: GLfloat);
+var
+  i: integer;
+  y, z, c, s: GLfloat;
+begin
+  SinCos(Angle, s, c);
+  for i := 0 to 2 do begin
+    y := m[i, 1];
+    z := m[i, 2];
+    m[i, 1] := y * c - z * s;
+    m[i, 2] := y * s + z * c;
+  end;
+end;
+
+procedure RotateY(var m: TMatrix4f; Angle: GLfloat);
+var
+  i: integer;
+  x, z, c, s: GLfloat;
+begin
+  SinCos(Angle, s, c);
+  for i := 0 to 2 do begin
+    x := m[i, 0];
+    z := m[i, 2];
+    m[i, 0] := x * c - z * s;
+    m[i, 2] := x * s + z * c;
+  end;
+end;
+
+procedure RotateZ(var m: TMatrix4f; Angle: GLfloat);
+var
+  i: integer;
+  x, y, c, s: GLfloat;
+begin
+  SinCos(Angle, s, c);
+  for i := 0 to 2 do begin
+    x := m[i, 0];
+    y := m[i, 1];
+    m[i, 0] := x * c - y * s;
+    m[i, 1] := x * s + y * c;
+  end;
+end;
+
+procedure Scale(var m: TMatrix4f; Factor: GLfloat);
+var
+  i, j: integer;
+begin
+  for i := 0 to 2 do begin
+    for j := 0 to 2 do begin
+      m[i, j] := m[i, j] * Factor;
+    end;
+  end;
+end;
+
+procedure Translate(var m: TMatrix4f; x, y, z: GLfloat);
+begin
+  m[3, 0] := m[3, 0] + x;
+  m[3, 1] := m[3, 1] + y;
+  m[3, 2] := m[3, 2] + z;
+end;
+
+{$IFDEF DEBUG_MATRIX}
+procedure DebugMatrix(m: TMatrix4f);
+const
+  MASK = '%8.3f';
+var
+  r: Integer;
+begin
+  DebugLn('m = ');
+  for r := 0 to 3 do
+    DebugLn([Format(MASK, [m[r, 0]]), Format(MASK, [m[r, 1]]), Format(MASK, [m[r,2]]), Format(MASK, [m[r,3]])]);
+  DebugLn;
+end;
+{$ENDIF}
 
 { TViewerFrame }
 
@@ -170,6 +268,8 @@ begin
   FShowAxes := false;
   FShowSymbols := true;
   FShowSticks := false;
+
+  Identity(FViewMatrix);
 end;
 
 destructor TLiss3dViewerFrame.Destroy;
@@ -282,6 +382,67 @@ begin
   glPopMatrix;
 end;
 
+{$IFDEF DEBUG_VIEWS}
+procedure TLiss3dViewerFrame.DrawDebugScene;
+begin
+  glEnable(GL_COLOR_MATERIAL);
+
+  glBegin(GL_POLYGON);
+  glColor3f(0, 0, 1);
+  glNormal3f(0.0, 0.0, 1.0);
+  glVertex3f(1.0, 1.0, 1.0);
+  glVertex3f(-1.0, 1.0, 1.0);
+  glVertex3f(-1.0, -1.0, 1.0);
+  glVertex3f(1.0, -1.0, 1.0);
+  glEnd;
+
+  glBegin(GL_POLYGON);
+  glColor3f(0, 0, 0.5);
+  glNormal3f(0.0, 0.0, -1.0);
+  glVertex3f(1.0, 1.0, -1.0);
+  glVertex3f(1.0, -1.0, -1.0);
+  glVertex3f(-1.0, -1.0, -1.0);
+  glVertex3f(-1.0, 1.0, -1.0);
+  glEnd;
+
+  glBegin(GL_POLYGON);
+  glColor3f(0.5, 0, 0);
+  glNormal3f(-1.0, 0.0, 0.0);
+  glVertex3f(-1.0, 1.0, 1.0);
+  glVertex3f(-1.0, 1.0, -1.0);
+  glVertex3f(-1.0, -1.0, -1.0);
+  glVertex3f(-1.0, -1.0, 1.0);
+  glEnd;
+
+  glBegin(GL_POLYGON);
+  glColor3f(1, 0.1, 0.1);
+  glNormal3f(1.0, 0.0, 0.0);
+  glVertex3f(1.0, 1.0, 1.0);
+  glVertex3f(1.0, -1.0, 1.0);
+  glVertex3f(1.0, -1.0, -1.0);
+  glVertex3f(1.0, 1.0, -1.0);
+  glEnd;
+
+  glBegin(GL_POLYGON);
+  glColor3f(0, 0.7, 0);
+  glNormal3f(0.0, 1.0, 0.0);
+  glVertex3f(-1.0, 1.0, -1.0);
+  glVertex3f(-1.0, 1.0, 1.0);
+  glVertex3f(1.0, 1.0, 1.0);
+  glVertex3f(1.0, 1.0, -1.0);
+  glEnd;
+
+  glBegin(GL_POLYGON);
+  glColor3f(0, 0.4, 0);
+  glNormal3f(0.0, -1.0, 0.0);
+  glVertex3f(-1.0, -1.0, -1.0);
+  glVertex3f(1.0, -1.0, -1.0);
+  glVertex3f(1.0, -1.0, 1.0);
+  glVertex3f(-1.0, -1.0, 1.0);
+  glEnd;
+end;
+{$ENDIF}
+
 procedure TLiss3dViewerFrame.DrawScene;
 var
   i: Integer;
@@ -319,6 +480,11 @@ begin
   glTranslatef(APoint.x, APoint.y, APoint.z);
   gluSphere(FSphere, FSymbolSize * 0.5, 18, 9);
   glPopMatrix;
+end;
+
+function TLiss3dViewerFrame.GetViewMatrix: TMatrix4f;
+begin
+  Result := FViewMatrix;
 end;
 
 procedure TLiss3dViewerFrame.InitGL;
@@ -389,42 +555,90 @@ end;
 
 procedure TLiss3dViewerFrame.OpenGLControlMouseMove(Sender: TObject; Shift: TShiftState;
   X, Y: Integer);
-begin
-  if (ssLeft in Shift) then begin
-    FCameraRotX := FCameraRotX + (y - FMouseY);
-    FCameraRotY := FCameraRotY + (x - FMouseX);
-    FMouseX := X;
-    FMouseY := Y;
-    OpenGLControl.Invalidate;
-    if Assigned(OnMouseMove) then OnMouseMove(Sender, Shift, X, Y);
-  end else
-  if (ssRight in Shift) then begin
-    FCameraRotZ := FCameraRotZ + (y - FMouseY) + (x - FMouseX);
-    FMouseX := X;
-    FMouseY := Y;
-    OpenGLControl.Invalidate;
-    if Assigned(OnMouseMove) then OnMouseMove(Sender, Shift, X, Y);
+const
+  ROT_STEP = 100;
+  MOVE_STEP = 1.0/100;
+  DIST_STEP = 0.005;
+
+  procedure RotateByZ;
+  var
+    ctr: TPoint;
+    phi1, phi2, dphi: Double;
+  begin
+    ctr := Point(OpenGLControl.Width div 2, OpenGLControl.Height div 2);
+    phi1 := arctan2(FMouseY - ctr.Y, FMouseX - ctr.X);
+    phi2 := arctan2(Y - ctr.Y, X - ctr.X);
+    dphi := phi2 - phi1;
+    if (phi2 > pi/2) and (phi1 < -pi/2) then
+      dphi := 2*pi - dphi
+    else
+    if (phi1 > pi/2) and (phi2 < -pi/2) then
+      dphi := 2*pi + dphi;
+    RotateZ(FViewMatrix, -RadToDeg(dphi) / ROT_STEP * 2);
   end;
+
+begin
+  if (ssLeft in Shift) then
+    case FMouseMode of
+      mmRotX:
+        RotateX(FViewMatrix, (Y - FMouseY) / ROT_STEP);
+      mmRotY:
+        RotateY(FViewMatrix, -(X - FMouseX) / ROT_STEP);
+      mmRotZ:
+        RotateByZ;
+      mmOffset:
+        Translate(FViewMatrix, (X - FMouseX) * MOVE_STEP, -(Y - FMouseY) * MOVE_STEP, 0.0);
+      mmDistance:
+        begin
+          FCameraDistance := FCameraDistance * (1.0 + DIST_STEP * (Y - FMouseY));
+          InvalidateView;//GL;
+        end;
+      mmFree:
+        begin
+          if ([ssLeft, ssCtrl] * Shift = [ssLeft]) then
+          begin
+            // Left mouse button --> rotate around x and y (horizontal / vertical axes)
+            if abs(x - FMouseX) > abs(Y - FMouseY) then
+              RotateY(FViewMatrix, -(X - FMouseX) / ROT_STEP)
+            else if abs(x - FMouseX) < abs(Y - FMouseY) then
+              RotateX(FViewMatrix, (Y - FMouseY) / ROT_STEP)
+          end else
+          if ([ssLeft, ssCtrl] * Shift = [ssLeft, ssCtrl]) then
+          begin
+            // Left mouse button + Ctrl --> rotate around z axis (out-of-screen axis)
+            RotateByZ;
+          end;
+        end;
+    end
+  else
+  if ([ssRight] * Shift = [ssRight]) then
+  begin
+    // Right mouse button --> offset model within screen plane
+    Translate(FViewMatrix, (X - FMouseX) * MOVE_STEP, -(Y - FMouseY) * MOVE_STEP, 0.0);
+  end else
+    exit;
+
+  FMouseX := X;
+  FMouseY := Y;
+  OpenGLControl.Invalidate;
+  if Assigned(OnMouseMove) then
+    OnMouseMove(Sender, Shift, X, Y);
 end;
 
+{ Change distance of model from camera. Holding SHIFT down makes larger steps. }
 procedure TLiss3dViewerFrame.OpenGLControlMouseWheel(Sender: TObject;
   Shift: TShiftState; WheelDelta: Integer; MousePos: TPoint;
   var Handled: Boolean);
 const
   SPEED = 0.0005;
-var
-  f: Double;
 begin
-  if (ssCtrl in Shift) then
-    f := -1.0
-  else
-    f := 1.0;
   if (ssShift in Shift) then
-    f := f * 2;
-  FCameraDistance := FCameraDistance * (1.0 + f * WheelDelta * SPEED);
-  OpenGLControl.Invalidate;
+    WheelDelta := WheelDelta * 5;
+  FCameraDistance := FCameraDistance * (1.0 + WheelDelta * SPEED);
+  InvalidateView;
 end;
 
+{ Main OpenGL drawing routine. }
 procedure TLiss3dViewerFrame.OpenGLControlPaint(Sender: TObject);
 begin
   if not OpenGLControl.MakeCurrent then
@@ -449,14 +663,18 @@ begin
   glPushMatrix();
 
   // Transform modelview matrix
-  glTranslatef(0, 0, -FCameraDistance);
-  glRotatef(FCameraRotX, 1, 0, 0);
-  glRotatef(FCameraRotY, 0, 1, 0);
-  glRotatef(FCameraRotZ, 0, 0, 1);
+  glMultMatrixf(@FViewMatrix);
+  {$IFDEF DEBUG_MATRIX}
+  DebugMatrix(FViewmatrix);
+  {$ENDIF}
 
   // Draw axes and scene using transformed ModelView matrix
   DrawAxes;
+  {$IFDEF DEBUG_VIEWS}
+  DrawDebugScene;
+  {$ELSE}
   DrawScene;
+  {$ENDIF}
 
   // Restore ModelView matrix
   glPopMatrix();
@@ -468,6 +686,24 @@ procedure TLiss3dViewerFrame.OpenGLControlResize(Sender: TObject);
 begin
   if FInitDone and OpenGLControl.MakeCurrent then
     ToPerspective;
+end;
+
+procedure TLiss3dViewerFrame.RotateAroundX(ADegrees: Double);
+begin
+  RotateX(FViewMatrix, DegToRad(ADegrees));
+  OpenGLControl.Invalidate
+end;
+
+procedure TLiss3dViewerFrame.RotateAroundY(ADegrees: Double);
+begin
+  RotateY(FViewMatrix, DegToRad(ADegrees));
+  OpenGLControl.Invalidate
+end;
+
+procedure TLiss3dViewerFrame.RotateAroundZ(ADegrees: Double);
+begin
+  RotateZ(FViewMatrix, DegToRad(ADegrees));
+  OpenGLControl.Invalidate
 end;
 
 procedure TLiss3dViewerFrame.SetBackColor(AValue: TColor);
@@ -548,6 +784,12 @@ begin
   OpenGLControl.Invalidate;
 end;
 
+procedure TLiss3dViewerFrame.SetViewMatrix(m: TMatrix4f);
+begin
+  FViewMatrix := m;
+  OpenGLControl.Invalidate;
+end;
+
 procedure TLiss3dViewerFrame.ToBitmap(ABitmap: TCustomBitmap);
 begin
   OpenGLControl.SwapBuffers;
@@ -559,7 +801,6 @@ procedure TLiss3dViewerFrame.ToPerspective;
 var
   aspect: GLFloat;
   x1, x2, y1, y2: Double;
-
 begin
   // Set viewport to be the entire window of the OpenGLControl
   glViewport(0, 0, OpenGLControl.Width, OpenGLControl.Height);
@@ -580,13 +821,20 @@ begin
         x1 := - x2;
         y1 := x1 / aspect;
         y2 := x2 / aspect;
-        glOrtho(x1, x2, y1, y2, NEAR_CLIPDIST, FAR_CLIPDIST);
+        glOrtho(x1, x2, y1, y2, 0.01*NEAR_CLIPDIST, FAR_CLIPDIST);
       end;
   end;
+  glTranslatef(0, 0, -FCameraDistance);
 
   // Switch to modelview matrix in order to set scene
   glMatrixMode(GL_MODELVIEW);
   glLoadIdentity();
+end;
+
+procedure TLiss3dViewerFrame.TranslateBy(dx, dy: Double);
+begin
+  Translate(FViewMatrix, dx, dy, 0);
+  OpenGLControl.Invalidate
 end;
 
 end.

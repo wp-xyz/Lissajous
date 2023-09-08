@@ -9,7 +9,7 @@ uses                                                  lazloggerbase,
   Forms, Controls, Graphics, Dialogs, ExtCtrls,
   StdCtrls, ComCtrls, Spin, Buttons, Menus, ActnList, StdActns,
   mrumanager, gl, glu,
-  uLiss3dGen, uLiss3dViewGL;
+  uLiss3dTypes, uLiss3dGen, uLiss3dViewGL;
 
 type
   TLissFileRec = array[0..15] of DWord;
@@ -22,6 +22,11 @@ type
     acSaveParams: TAction;
     acSaveImage: TAction;
     acResetParams: TAction;
+    acRotateX: TAction;
+    acRotateY: TAction;
+    acRotateZ: TAction;
+    acOffset: TAction;
+    acDistance: TAction;
     ActionList: TActionList;
     ApplicationProperties: TApplicationProperties;
     cbSymbolColor: TColorButton;
@@ -38,17 +43,10 @@ type
     edFormulaY: TComboBox;
     edFormulaZ: TComboBox;
     acExit: TFileExit;
-    lblZDegrees: TLabel;
-    lblXRotation: TLabel;
-    lblYRotation: TLabel;
-    lblXDegrees: TLabel;
-    lblYDegrees: TLabel;
-    lblZRotation: TLabel;
     seCameraDistance: TFloatSpinEdit;
     lblCameraDistance: TLabel;
     lblStickDiam: TLabel;
     LblSymbolDiam: TLabel;
-    seXRotation: TFloatSpinEdit;
     seSymbolSize: TFloatSpinEdit;
     gbRendering: TGroupBox;
     ImageList: TImageList;
@@ -82,8 +80,6 @@ type
     seStepSize: TFloatSpinEdit;
     seStepCount: TSpinEdit;
     seStickDiam: TFloatSpinEdit;
-    seYRotation: TFloatSpinEdit;
-    seZRotation: TFloatSpinEdit;
     Splitter: TSplitter;
     ToolBar: TToolBar;
     tbLoadParams: TToolButton;
@@ -95,9 +91,25 @@ type
     ToolButton2: TToolButton;
     tbCalculate: TToolButton;
     ToolButton3: TToolButton;
+    tbRotX: TToolButton;
+    tbRotY: TToolButton;
+    tbRotZ: TToolButton;
+    ToolButton4: TToolButton;
+    ToolButton5: TToolButton;
+    ToolButton7: TToolButton;
+    udRotX: TUpDown;
+    udRotY: TUpDown;
+    udRotZ: TUpDown;
+    udOffset: TUpDown;
+    udDistance: TUpDown;
     procedure acCalculateExecute(Sender: TObject);
+    procedure acDistanceExecute(Sender: TObject);
     procedure acLoadParamsExecute(Sender: TObject);
+    procedure acOffsetExecute(Sender: TObject);
     procedure acResetParamsExecute(Sender: TObject);
+    procedure acRotateXExecute(Sender: TObject);
+    procedure acRotateYExecute(Sender: TObject);
+    procedure acRotateZExecute(Sender: TObject);
     procedure acSaveImageExecute(Sender: TObject);
     procedure acSaveParamsExecute(Sender: TObject);
     procedure ApplicationPropertiesIdle(Sender: TObject; var Done: Boolean);
@@ -119,10 +131,8 @@ type
     procedure seCameraDistanceChange(Sender: TObject);
     procedure seStickDiamChange(Sender: TObject);
     procedure seSymbolSizeChange(Sender: TObject);
-    procedure seXRotationChange(Sender: TObject);
-    procedure seYRotationChange(Sender: TObject);
-    procedure seZRotationChange(Sender: TObject);
     procedure UpdateLissajousHandler(Sender: TObject);
+    procedure UpDownClick(Sender: TObject; Button: TUDBtnType);
   private
     FActivated: Boolean;
     FGenerator: TLiss3dGen;
@@ -195,11 +205,20 @@ const
   BUILTIN_FORMULA3_Y = 'sin(a*t)*(1.0+sin(c*t))/2';
   BUILTIN_FORMULA3_Z = 'sin(d*t)';
 
+
 { TMainForm }
 
 procedure TMainForm.acCalculateExecute(Sender: TObject);
 begin
   Calculate;
+end;
+
+procedure TMainForm.acDistanceExecute(Sender: TObject);
+begin
+  if acDistance.Checked then
+    FViewer.MouseMode := mmDistance
+  else
+    FViewer.MouseMode := mmFree;
 end;
 
 procedure TMainForm.acLoadParamsExecute(Sender: TObject);
@@ -213,6 +232,14 @@ begin
     if Execute then
       LoadParamFile(FileName);
   end;
+end;
+
+procedure TMainForm.acOffsetExecute(Sender: TObject);
+begin
+  if acOffset.Checked then
+    FViewer.MouseMode := mmOffset
+  else
+    FViewer.MouseMode := mmFree;
 end;
 
 procedure TMainForm.acResetParamsExecute(Sender: TObject);
@@ -229,13 +256,34 @@ begin
   cbShowAxes.Checked := false;
   FViewer.CameraDistance := CAMERA_DISTANCE;
   FViewer.CameraAngle := VIEW_ANGLE;
-  FViewer.CameraRotX := 0;
-  FViewer.CameraRotY := 0;
-  FViewer.CameraRotZ := 0;
   FViewer.ShowAxes := cbShowAxes.Checked;
   FViewer.SymbolColor := cbSymbolColor.ButtonColor;
   FViewer.BackColor := cbBackgroundColor.ButtonColor;
   FFileName := '';
+end;
+
+procedure TMainForm.acRotateXExecute(Sender: TObject);
+begin
+  if acRotateX.Checked then
+    FViewer.MouseMode := mmRotX
+  else
+    FViewer.MouseMode := mmFree;
+end;
+
+procedure TMainForm.acRotateYExecute(Sender: TObject);
+begin
+  if acRotateY.Checked then
+    FViewer.MouseMode := mmRotY
+  else
+    FViewer.MouseMode := mmFree;
+end;
+
+procedure TMainForm.acRotateZExecute(Sender: TObject);
+begin
+  if acRotateZ.Checked then
+    FViewer.MouseMode := mmRotZ
+  else
+    FViewer.MouseMode := mmFree;
 end;
 
 procedure TMainForm.acSaveImageExecute(Sender: TObject);
@@ -319,9 +367,6 @@ procedure TMainForm.ApplicationPropertiesIdle(Sender: TObject;
 begin
   inc(FViewerLock);
   seCameraDistance.Value := FViewer.CameraDistance;
-  seXRotation.Value := FViewer.CameraRotX;
-  seYRotation.Value := FViewer.CameraRotY;
-  seZRotation.Value := FViewer.CameraRotZ;
   dec(FViewerLock);
 end;
 
@@ -407,38 +452,103 @@ end;
 
 procedure TMainForm.cbViewDirectionChange(Sender: TObject);
 const
-  ROTATIONS: array[0..18, 0..2] of double = (
-    (  0,   0,   0),      // mouse
-
-    (  0,   0,   0),      // xy plane (x right, y up)
-    (  0, 180,   0),      // xy plane (x left, y up)
-
-    (-90,   0, -90),      // yz plane (y right, z up)
-    (-90,   0,  90),      // yz plane (y left, z up)
-
-    (-90,   0,   0),      // xz plane (x right, z up)
-    (-90,   0, 180),      // xz plane (x left, z up)
-
-    ( 45,  45,  90),      // diagonal 1 (x up)
-    ( 45, 135,  90),      // diagonal 2 (x up)
-    ( 45, 225,  90),      // diagonal 3 (x up)
-    ( 45, 315,  90),      // diagonal 4 (x up)
-
-    ( 45, -45,   0),      // diagonal 5 (y up)
-    ( 45,  45,   0),      // diagonal 6 (y up)
-    ( 45, 135,   0),      // diagonal 7 (y up)
-    ( 45, 225,   0),      // diagonal 8 (y up)
-
-    (-45,   0, 225),      // diagonal 9 (z up)
-    (-45,   0, -45),      // diagonal 10 (z up)
-    (-45,   0,  45),      // diagonal 11 (z up)
-    (-45,   0, 135)       // diagonal 12 (z up)
-  );
-
+  SQRT_3 = 1.0/sqrt(3.0);
+var
+  m: TMatrix4f;
+  v: TPoint3d;
 begin
-  FViewer.CameraRotX := ROTATIONS[cbViewDirection.ItemIndex, 0];
-  FViewer.CameraRotY := ROTATIONS[cbViewDirection.ItemIndex, 1];
-  FViewer.CameraRotZ := ROTATIONS[cbViewDirection.ItemIndex, 2];
+  Identity(m);
+  case cbViewDirection.ItemIndex of
+    0: Exit;
+
+    // face views
+
+    1: begin // view direction (0, -1, 0) xy plane
+         ;
+       end;
+    2: begin   // view direction (0, 1, 0) xy plane
+         RotateY(m, pi);
+       end;
+    3: begin   // view direction (-1, 0, 0) yz plane
+         RotateZ(m, -pi/2);
+         RotateX(m, -pi/2);
+       end;
+    4: begin   // view direction (1, 0, 0) yz plane
+         RotateZ(m, pi/2);
+         RotateX(m, -pi/2);
+       end;
+    5: begin   // view direction (0, 0, -1) xz plane
+         RotateX(m, -pi/2);
+       end;
+    6: begin   // view direction (0, 0, 1) xz plane
+         RotateX(m, -pi/2);
+         RotateY(m, pi);
+       end;
+
+    // face diagonal views
+
+    7: begin  // view direction (-1, -1, 0)
+         RotateY(m, pi/2);
+         RotateX(m, pi/4);
+       end;
+    8: begin  // view direction (1, 1, 0)
+         RotateY(m, -pi/2);
+         RotateX(m, -pi/4);
+       end;
+    9: begin  // view direction (0, -1, -1)
+         RotateX(m, pi/4);
+       end;
+   10: begin  // view direction (0, 1, 1)
+         RotateY(m, pi);
+         RotateX(m, -pi/4);
+       end;
+   11: begin  // view direction (-1, 0, -1);
+         RotateY(m, pi/4);
+       end;
+   12: begin  // view direction (1, 0, 1);
+         RotateY(m, pi*5/4);
+       end;
+
+   // body diagonal views from top
+
+   13: begin  // view direction (-1, -1, -1)   bright red, bright green, bright blue
+         RotateY(m, pi/4);
+         RotateX(m, arcsin(SQRT_3));
+       end;
+   14: begin   // view direction (1, -1, -1)   dark red, bright green,bright blue
+        RotateY(m, pi*3/4);
+        RotateX(m, -arcsin(SQRT_3));
+        RotateY(m, pi);
+       end;
+   15: begin   // view direction (1, -1, 1)      ok
+         RotateY(m, pi*5/4);
+         RotateX(m, arcsin(SQRT_3));
+       end;
+   16: begin   // view direction (-1, -1, 1)  bright red, dark green, dark blue
+        RotateY(m, pi*3/4);
+        RotateX(m, arcsin(SQRT_3));
+       end;
+
+   // body diagonal views from bottom
+
+   17: begin  // view direction (1, 1, 1)      dark red, dark green, dark blue
+         RotateY(m, pi*5/4);
+         RotateX(m, -arcsin(SQRT_3));
+       end;
+   18: begin   // view direction (1, 1, -1)   dark red, dark green, bright blue
+         RotateY(m, -pi/4);
+         RotateX(m, -arcsin(SQRT_3));
+       end;
+   19: begin   // view direction (-1, 1, -1)      ok
+         RotateY(m, pi/4);
+         RotateX(m, -arcsin(SQRT_3));
+       end;
+   20: begin   // view direction (-1, 1, 1)    bright red, dark green, dark blue
+        RotateY(m, pi*3/4);
+        RotateX(m, -arcsin(SQRT_3));
+       end;
+  end;
+  FViewer.SetViewMatrix(m);
   FViewer.InvalidateView;
 end;
 
@@ -520,6 +630,10 @@ end;
 procedure TMainForm.LoadLissParams(ini: TCustomIniFile);
 var
   section: String;
+  m: TMatrix4f;
+  i,j,k: Integer;
+  s: String;
+  sa: TStringArray;
 begin
   Assert(ini <> nil);
 
@@ -554,9 +668,31 @@ begin
   cbShowSymbols.Checked := ini.ReadBool(section, 'ShowSymbols', true);
 
   FViewer.CameraDistance := ini.ReadFloat(section, 'CameraDistance', FViewer.CameraDistance);
+  s := ini.ReadString(section, 'ViewMatrix', '');
+  Identity(m);
+  if s <> '' then
+  begin
+    sa := s.Split(' ');
+    i := 0;
+    j := 0;
+    for k := 0 to High(sa) do
+    begin
+      m[i,j] := StrToFloat(sa[k], ini.FormatSettings);
+      inc(j);
+      if j = 4 then
+      begin
+        j := 0;
+        inc(i);
+      end;
+    end;
+  end;
+  FViewer.SetViewMatrix(m);
+
+  {
   FViewer.CameraRotX := ini.ReadFloat(section, 'RotationX', FViewer.CameraRotX);
   FViewer.CameraRotY := ini.ReadFloat(section, 'RotationY', FViewer.CameraRotY);
   FViewer.CameraRotZ := ini.ReadFloat(section, 'RotationZ', FViewer.CameraRotZ);
+  }
 
   FViewer.ShowAxes := cbShowAxes.Checked;
 
@@ -635,6 +771,9 @@ end;
 procedure TMainForm.SaveLissParams(ini: TCustomIniFile);
 var
   section: String;
+  i, j: Integer;
+  s: String;
+  m: TMatrix4f;
 begin
   Assert(ini <> nil);
 
@@ -666,9 +805,20 @@ begin
   ini.WriteBool(section, 'ShowSticks', cbShowSticks.Checked);
   ini.WriteBool(section, 'ShowSymbols', cbShowSymbols.Checked);
   ini.WriteFloat(section, 'CameraDistance', FViewer.CameraDistance);
+
+  m := FViewer.GetViewMatrix;
+  s := '';
+  for i := 0 to 3 do
+    for j := 0 to 3 do
+      s := Format('%s %.6f', [s, m[i,j]], ini.FormatSettings);
+  Delete(s, 1, 1);
+  ini.WriteString(section, 'ViewMatrix', s);
+
+  {
   ini.WriteFloat(section, 'RotationX', FViewer.CameraRotX);
   ini.WriteFloat(section, 'RotationY', FViewer.CameraRotY);
   ini.WriteFloat(section, 'RotationZ', FViewer.CameraRotZ);
+  }
 end;
 
 procedure TMainForm.LoadParamFile(const AFileName: String);
@@ -719,27 +869,6 @@ end;
 procedure TMainForm.seSymbolSizeChange(Sender: TObject);
 begin
   FViewer.SymbolSize := seSymbolSize.Value;
-end;
-
-procedure TMainForm.seXRotationChange(Sender: TObject);
-begin
-  if FViewerLock <> 0 then exit;
-  FViewer.CameraRotX := seXRotation.Value;
-  FViewer.InvalidateView;
-end;
-
-procedure TMainForm.seYRotationChange(Sender: TObject);
-begin
-  if FViewerLock <> 0 then exit;
-  FViewer.CameraRotY := seYRotation.Value;
-  FViewer.InvalidateView;
-end;
-
-procedure TMainForm.seZRotationChange(Sender: TObject);
-begin
-  if FViewerLock <> 0 then exit;
-  FViewer.CameraRotZ := seZRotation.Value;
-  FViewer.InvalidateView;
 end;
 
 function TMainForm.UnpackParams(AData: TLissFileRec): Boolean;
@@ -861,6 +990,34 @@ end;
 procedure TMainForm.UpdateLissajousHandler(Sender: TObject);
 begin
   Calculate;
+end;
+
+procedure TMainForm.UpDownClick(Sender: TObject; Button: TUDBtnType);
+var
+  delta: Double;
+  d: Double;
+begin
+  case Button of
+    btNext: delta := 1.0;
+    btPrev: delta := -1.0;
+  end;
+  if Sender = udRotX then
+    FViewer.RotateAroundX(delta)
+  else if Sender = udRotY then
+    FViewer.RotateAroundY(-delta)
+  else if Sender = udRotZ then
+    FViewer.RotateAroundZ(delta)
+  else if Sender = udOffset then
+    FViewer.TranslateBy(0.1*delta, 0)
+  else if Sender = udDistance then
+  begin
+    d := FViewer.CameraDistance * (1.0 + 0.05*delta);
+    if d <> 0 then
+    begin
+      FViewer.CameraDistance := d;
+      FViewer.InvalidateView;
+    end;
+  end;
 end;
 
 procedure TMainForm.UpdateLissParams;

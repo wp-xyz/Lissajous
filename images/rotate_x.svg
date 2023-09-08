@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   height="24"
+   width="24"
+   version="1.1"
+   id="svg16"
+   sodipodi:docname="rotate_x.svg"
+   inkscape:export-filename="images\rotate_y_32.png"
+   inkscape:export-xdpi="128"
+   inkscape:export-ydpi="128"
+   inkscape:version="1.2 (dc2aedaf03, 2022-05-15)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs20">
+    <marker
+       style="overflow:visible"
+       id="RoundedArrow"
+       refX="3"
+       refY="0"
+       orient="auto-start-reverse"
+       inkscape:stockid="RoundedArrow"
+       markerWidth="3.25"
+       markerHeight="3.25"
+       viewBox="0 0 6.1347524 5.9304951"
+       inkscape:isstock="true"
+       inkscape:collect="always"
+       preserveAspectRatio="xMidYMid">
+      <path
+         transform="scale(0.7)"
+         d="m -0.21114562,-4.1055728 6.42229122,3.21114561 a 1,1 90 0 1 0,1.78885438 L -0.21114562,4.1055728 A 1.236068,1.236068 31.717474 0 1 -2,3 v -6 a 1.236068,1.236068 148.28253 0 1 1.78885438,-1.1055728 z"
+         style="fill:context-stroke;fill-rule:evenodd;stroke:none"
+         id="path1367" />
+    </marker>
+  </defs>
+  <sodipodi:namedview
+     id="namedview18"
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1.0"
+     inkscape:pageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="true"
+     inkscape:zoom="19.125"
+     inkscape:cx="6.6928105"
+     inkscape:cy="14.718954"
+     inkscape:current-layer="svg16"
+     inkscape:showpageshadow="2"
+     inkscape:window-width="2560"
+     inkscape:window-height="1009"
+     inkscape:window-x="-8"
+     inkscape:window-y="-8"
+     inkscape:window-maximized="1">
+    <inkscape:grid
+       type="xygrid"
+       id="grid923" />
+  </sodipodi:namedview>
+  <g
+     id="g15241"
+     transform="rotate(90,12.197188,11.766227)">
+    <path
+       id="path5104"
+       style="fill:none;stroke:#00aad4;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;stroke-miterlimit:3.9;marker-end:url(#RoundedArrow);paint-order:markers fill stroke"
+       d="M 14.671355,6.7660411 C 23.786395,6.7363638 23.944593,17.455986 11.997707,17.636074 0.30691929,17.537668 1.3096869,6.9264979 8.4721432,6.7443829"
+       sodipodi:nodetypes="ccc" />
+    <path
+       style="fill:none;stroke:#00aad4;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+       d="m 11.905275,1.0722142 0.07395,14.3454868"
+       id="path12874"
+       sodipodi:nodetypes="cc" />
+    <path
+       style="fill:none;stroke:#00aad4;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:miter;stroke-dasharray:none;stroke-opacity:1"
+       d="m 12.07245,19.83676 0.03538,2.62348"
+       id="path12874-2"
+       sodipodi:nodetypes="cc" />
+  </g>
+</svg>
